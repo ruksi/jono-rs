@@ -1,0 +1,14 @@
+[package]
+name = "jono_dispatch"
+description = "Dispatch interface for submitting jobs to Jono queues"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+jono_core = { path = "../jono_core" }
+redis.workspace = true
+serde.workspace = true
+serde_json.workspace = true
+tracing.workspace = true
