@@ -16,7 +16,7 @@ docker compose ps
 cargo test
 
 # check that the documentation looks proper
-cargo doc --workspace --no-deps --open
+cargo doc --no-deps --open
 
 # if/when you are done
 docker compose down -v

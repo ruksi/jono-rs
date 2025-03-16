@@ -226,6 +226,14 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
+name = "jono"
+version = "0.1.0"
+dependencies = [
+ "jono_core",
+ "jono_dispatch",
+]
+
+[[package]]
 name = "jono_core"
 version = "0.1.0"
 dependencies = [

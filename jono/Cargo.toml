@@ -1,0 +1,15 @@
+[package]
+name = "jono"
+description = "Priority Job Queue on Redis"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[features]
+default = ["dispatch"]
+dispatch = ["dep:jono_dispatch"]
+
+[dependencies]
+jono_core = { path = "../jono_core" }
+jono_dispatch = { path = "../jono_dispatch", default-features = false, optional = true }

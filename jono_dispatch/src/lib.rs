@@ -12,6 +12,11 @@ use jono_core::{
     current_timestamp_ms, generate_job_id, JobMetadata, JobStatus, JonoError, JonoKeys, JonoResult,
 };
 
+pub mod prelude {
+    pub use crate::Dispatcher;
+    pub use crate::JobPlan;
+}
+
 /// Job plan represents a description for a task to be queued and, hopefully, completed
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JobPlan {
