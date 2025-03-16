@@ -7,9 +7,9 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["dispatch"]
-dispatch = ["dep:jono_dispatch"]
+default = ["produce"]
+produce = ["dep:jono_produce"]
 
 [dependencies]
 jono_core = { path = "../jono_core" }
-jono_dispatch = { path = "../jono_dispatch", default-features = false, optional = true }
+jono_produce = { path = "../jono_produce", default-features = false, optional = true }

@@ -230,7 +230,7 @@ name = "jono"
 version = "0.1.0"
 dependencies = [
  "jono_core",
- "jono_dispatch",
+ "jono_produce",
 ]
 
 [[package]]
@@ -245,7 +245,7 @@ dependencies = [
 ]
 
 [[package]]
-name = "jono_dispatch"
+name = "jono_produce"
 version = "0.1.0"
 dependencies = [
  "jono_core",

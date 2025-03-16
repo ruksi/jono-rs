@@ -1,17 +1,17 @@
 use jono_core::{
     current_timestamp_ms, generate_job_id, get_redis_url, JobStatus, JonoError, JonoResult,
 };
-use jono_dispatch::{Dispatcher, JobPlan};
+use jono_produce::{JobPlan, Producer};
 use serde_json::json;
 
-fn create_test_dispatcher(topic: &str) -> Dispatcher {
+fn create_test_producer(topic: &str) -> Producer {
     let redis_url = get_redis_url();
-    Dispatcher::new(&redis_url, topic).expect("Failed to create dispatcher")
+    Producer::new(&redis_url, topic).expect("Failed to create Jono Producer")
 }
 
 #[test]
 fn test_dispatch_job() -> JonoResult<()> {
-    let dispatcher = create_test_dispatcher("test_dispatch");
+    let producer = create_test_producer("test_dispatch");
     let payload = json!({
         "action": "test_action",
         "data": "test_data"
@@ -19,67 +19,67 @@ fn test_dispatch_job() -> JonoResult<()> {
 
     let plan = JobPlan::new(&payload)?;
     let job_id = plan.id.clone();
-    dispatcher.clean_job(&job_id)?;
-    let job_id = dispatcher.dispatch(plan)?;
+    producer.clean_job(&job_id)?;
+    let job_id = producer.dispatch(plan)?;
 
-    let metadata = dispatcher.get_job_metadata(&job_id)?;
+    let metadata = producer.get_job_metadata(&job_id)?;
     assert_eq!(metadata.status, JobStatus::Queued);
     assert_eq!(metadata.payload, payload);
 
-    dispatcher.clean_job(&job_id)?;
+    producer.clean_job(&job_id)?;
     Ok(())
 }
 
 #[test]
 fn test_cancel_dispatched_job() -> JonoResult<()> {
-    let dispatcher = create_test_dispatcher("test_cancel");
+    let producer = create_test_producer("test_cancel");
     let payload = json!({ "action": "cancel this soon!" });
 
     let plan = JobPlan::new(payload)?;
     let job_id = plan.id.clone();
-    dispatcher.clean_job(&job_id)?;
-    let job_id = dispatcher.dispatch(plan)?;
+    producer.clean_job(&job_id)?;
+    let job_id = producer.dispatch(plan)?;
 
-    let cancel_ok = dispatcher.cancel(&job_id, 0)?;
+    let cancel_ok = producer.cancel(&job_id, 0)?;
     assert!(cancel_ok);
 
-    let metadata = dispatcher.get_job_metadata(&job_id)?;
+    let metadata = producer.get_job_metadata(&job_id)?;
     assert_eq!(metadata.status, JobStatus::Cancelled);
 
-    dispatcher.clean_job(&job_id)?;
+    producer.clean_job(&job_id)?;
     Ok(())
 }
 
 #[test]
 fn test_dispatch_scheduled_job() -> JonoResult<()> {
-    let dispatcher = create_test_dispatcher("test_schedule");
+    let producer = create_test_producer("test_schedule");
     let payload = json!({ "action": "scheduled_action" });
     let future_time = current_timestamp_ms() + 10000;
 
     let plan = JobPlan::new(payload)?.schedule_for(future_time);
     let job_id = plan.id.clone();
-    dispatcher.clean_job(&job_id)?;
-    let job_id = dispatcher.dispatch(plan)?;
+    producer.clean_job(&job_id)?;
+    let job_id = producer.dispatch(plan)?;
 
-    let metadata = dispatcher.get_job_metadata(&job_id)?;
+    let metadata = producer.get_job_metadata(&job_id)?;
     assert_eq!(metadata.status, JobStatus::Scheduled);
 
-    dispatcher.clean_job(&job_id)?;
+    producer.clean_job(&job_id)?;
     Ok(())
 }
 
 #[test]
 fn test_job_not_found() {
-    let dispatcher = create_test_dispatcher("test_not_found");
+    let producer = create_test_producer("test_not_found");
     let unknown_job_id = generate_job_id();
 
-    let metadata_result = dispatcher.get_job_metadata(&unknown_job_id);
+    let metadata_result = producer.get_job_metadata(&unknown_job_id);
     assert!(matches!(
         metadata_result.err().unwrap(),
         JonoError::NotFound(_)
     ));
 
-    let cancel_result = dispatcher.cancel(&unknown_job_id, 0);
+    let cancel_result = producer.cancel(&unknown_job_id, 0);
     assert!(matches!(
         cancel_result.err().unwrap(),
         JonoError::NotFound(_)
@@ -88,21 +88,21 @@ fn test_job_not_found() {
 
 #[test]
 fn test_clean_job() -> JonoResult<()> {
-    let dispatcher = create_test_dispatcher("test_clean");
+    let producer = create_test_producer("test_clean");
     let payload = json!({ "action": "clean this soon!" });
 
     let plan = JobPlan::new(payload)?;
     let job_id = plan.id.clone();
-    dispatcher.clean_job(&job_id)?;
-    let job_id = dispatcher.dispatch(plan)?;
+    producer.clean_job(&job_id)?;
+    let job_id = producer.dispatch(plan)?;
 
-    let exists_before = dispatcher.get_job_metadata(&job_id).is_ok();
+    let exists_before = producer.get_job_metadata(&job_id).is_ok();
     assert!(exists_before);
 
-    let clean_ok = dispatcher.clean_job(&job_id)?;
+    let clean_ok = producer.clean_job(&job_id)?;
     assert!(clean_ok);
 
-    let exists_after = dispatcher.get_job_metadata(&job_id);
+    let exists_after = producer.get_job_metadata(&job_id);
     assert!(matches!(
         exists_after.err().unwrap(),
         JonoError::NotFound(_)

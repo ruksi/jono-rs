@@ -2,7 +2,7 @@
 //!
 //! This is an _umbrella crate_ for re-exporting different components of
 //! the priority job queue system from a single place according to the
-//! features enabled like `dispatch` for the `jono_dispatch` crate to allow
+//! features enabled like `produce` for the `jono_produce` crate to allow
 //! submitting jobs.
 //!
 //! Shared utilities from `core` will always be available, regardless of
@@ -12,12 +12,12 @@
 
 pub use jono_core as core;
 
-#[cfg(feature = "dispatch")]
-pub use jono_dispatch as dispatch;
+#[cfg(feature = "produce")]
+pub use jono_produce as produce;
 
 pub mod prelude {
     pub use crate::core::prelude::*;
 
-    #[cfg(feature = "dispatch")]
-    pub use crate::dispatch::prelude::*;
+    #[cfg(feature = "produce")]
+    pub use crate::produce::prelude::*;
 }

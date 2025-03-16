@@ -1,5 +1,5 @@
 [package]
-name = "jono_dispatch"
+name = "jono_produce"
 description = "Dispatch interface for submitting jobs to Jono queues"
 edition.workspace = true
 license.workspace = true

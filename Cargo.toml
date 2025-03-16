@@ -3,7 +3,7 @@ resolver = "3"
 members = [
     "jono",
     "jono_core",
-    "jono_dispatch",
+    "jono_produce",
 ]
 
 [workspace.package]

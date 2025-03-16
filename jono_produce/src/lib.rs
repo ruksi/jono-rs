@@ -1,4 +1,4 @@
-//! `jono_dispatch` provides the interface for submitting jobs to Jono queues.
+//! `jono_produce` provides the interface for submitting jobs to Jono queues.
 //!
 //! This crate allows users to submit jobs to the queue, cancel jobs, and set job priorities.
 
@@ -13,11 +13,11 @@ use jono_core::{
 };
 
 pub mod prelude {
-    pub use crate::Dispatcher;
     pub use crate::JobPlan;
+    pub use crate::Producer;
 }
 
-/// Job plan represents a description for a task to be queued and, hopefully, completed
+/// Job plan represents **a description** of a task to be queued soon and, _hopefully_, completed
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct JobPlan {
     /// ULID identifier for the job
@@ -69,13 +69,13 @@ impl JobPlan {
 }
 
 /// Interface for submitting jobs to Jono queues
-pub struct Dispatcher {
+pub struct Producer {
     redis_client: Client,
     topic: String,
 }
 
-impl Dispatcher {
-    /// Create a new dispatcher with the given Redis URL and topic
+impl Producer {
+    /// Create a new Jono Producer with the given Redis URL and topic
     pub fn new(redis_url: &str, topic: &str) -> JonoResult<Self> {
         let redis_client = Client::open(redis_url).map_err(JonoError::Redis)?;
         Ok(Self {
