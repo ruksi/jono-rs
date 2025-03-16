@@ -8,9 +8,7 @@ use serde_json::Value;
 use std::collections::HashMap;
 use tracing::info;
 
-use jono_core::{
-    current_timestamp_ms, generate_job_id, JobMetadata, JobStatus, JonoError, JonoKeys, JonoResult,
-};
+use jono_core::*;
 
 pub mod prelude {
     pub use crate::JobPlan;
@@ -222,40 +220,7 @@ impl Producer {
         let metadata_map: HashMap<String, String> =
             conn.hgetall(metadata_key).map_err(JonoError::Redis)?;
 
-        let mut status = JobStatus::Queued;
-        if conn
-            .zscore::<_, _, Option<i64>>(keys.running_set(), job_id)
-            .map_err(JonoError::Redis)?
-            .is_some()
-        {
-            status = JobStatus::Running;
-        } else if conn
-            .zscore::<_, _, Option<i64>>(keys.scheduled_set(), job_id)
-            .map_err(JonoError::Redis)?
-            .is_some()
-        {
-            status = JobStatus::Scheduled;
-        } else if conn
-            .zscore::<_, _, Option<i64>>(keys.cancelled_set(), job_id)
-            .map_err(JonoError::Redis)?
-            .is_some()
-        {
-            status = JobStatus::Cancelled;
-        } else if conn
-            .zscore::<_, _, Option<i64>>(keys.queued_set(), job_id)
-            .map_err(JonoError::Redis)?
-            .is_some()
-        {
-            status = JobStatus::Queued;
-        } else if metadata_map.contains_key("completed_at") {
-            status = JobStatus::Completed;
-        } else if let Some(history) = metadata_map.get("attempt_history") {
-            if !history.is_empty() && history != "[]" {
-                status = JobStatus::Failed;
-            }
-        }
-
-        Ok(JobMetadata::from_hash(metadata_map, status)?)
+        Ok(JobMetadata::from_hash(metadata_map)?)
     }
 
     /// Clean up job data from Redis

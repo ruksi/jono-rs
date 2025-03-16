@@ -1,5 +1,4 @@
 use crate::error::{JonoError, JonoResult};
-use crate::job_status::JobStatus;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -8,9 +7,6 @@ use std::collections::HashMap;
 pub struct JobMetadata {
     /// Unique identifier for the job
     pub id: String,
-
-    /// The current status of the job
-    pub status: JobStatus,
 
     /// The job JSON payload
     pub payload: serde_json::Value,
@@ -27,7 +23,7 @@ pub struct JobMetadata {
 
 impl JobMetadata {
     /// Convert a Redis hash into more structured job metadata
-    pub fn from_hash(hash: HashMap<String, String>, status: JobStatus) -> JonoResult<Self> {
+    pub fn from_hash(hash: HashMap<String, String>) -> JonoResult<Self> {
         let id = hash
             .get("id")
             .ok_or_else(|| JonoError::InvalidJob("Missing id field".to_string()))?
@@ -59,7 +55,6 @@ impl JobMetadata {
 
         Ok(Self {
             id,
-            status,
             payload,
             max_attempts,
             attempt_count,

@@ -14,7 +14,7 @@ pub enum JobStatus {
     /// The job has failed to complete after specified retries.
     Failed,
     /// The job has been specifically canceled.
-    Cancelled,
+    Canceled,
     /// The job is scheduled to run at a future time.
     Scheduled,
 }
@@ -26,7 +26,7 @@ impl Display for JobStatus {
             JobStatus::Running => "running".to_string(),
             JobStatus::Completed => "completed".to_string(),
             JobStatus::Failed => "failed".to_string(),
-            JobStatus::Cancelled => "cancelled".to_string(),
+            JobStatus::Canceled => "canceled".to_string(),
             JobStatus::Scheduled => "scheduled".to_string(),
         };
         write!(f, "{}", str)
@@ -41,7 +41,7 @@ impl FromStr for JobStatus {
             "running" => Ok(JobStatus::Running),
             "completed" => Ok(JobStatus::Completed),
             "failed" => Ok(JobStatus::Failed),
-            "cancelled" => Ok(JobStatus::Cancelled),
+            "canceled" => Ok(JobStatus::Canceled),
             "scheduled" => Ok(JobStatus::Scheduled),
             _ => Err(format!("Unknown job status: {}", s)),
         }

@@ -6,15 +6,17 @@
 mod error;
 mod job_metadata;
 mod job_status;
+mod job_status_reader;
 mod keys;
 mod util;
 
 pub use error::{JonoError, JonoResult};
 pub use job_metadata::JobMetadata;
 pub use job_status::JobStatus;
+pub use job_status_reader::JobStatusReader;
 pub use keys::JonoKeys;
 pub use util::{current_timestamp_ms, generate_job_id, get_redis_url};
 
 pub mod prelude {
-    pub use crate::{JobMetadata, JobStatus, JonoError, JonoResult};
+    pub use crate::{JobMetadata, JobStatus, JobStatusReader, JonoError, JonoResult};
 }

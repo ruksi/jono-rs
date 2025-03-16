@@ -1,5 +1,6 @@
 use jono_core::{
-    current_timestamp_ms, generate_job_id, get_redis_url, JobStatus, JonoError, JonoResult,
+    current_timestamp_ms, generate_job_id, get_redis_url, JobStatus, JobStatusReader, JonoError,
+    JonoResult,
 };
 use jono_produce::{JobPlan, Producer};
 use serde_json::json;
@@ -23,8 +24,11 @@ fn test_dispatch_job() -> JonoResult<()> {
     let job_id = producer.dispatch(plan)?;
 
     let metadata = producer.get_job_metadata(&job_id)?;
-    assert_eq!(metadata.status, JobStatus::Queued);
     assert_eq!(metadata.payload, payload);
+
+    let status_reader = JobStatusReader::new(&get_redis_url(), "test_dispatch")?;
+    let status = status_reader.get_job_status(&job_id)?;
+    assert_eq!(status, JobStatus::Queued);
 
     producer.clean_job(&job_id)?;
     Ok(())
@@ -43,8 +47,10 @@ fn test_cancel_dispatched_job() -> JonoResult<()> {
     let cancel_ok = producer.cancel(&job_id, 0)?;
     assert!(cancel_ok);
 
-    let metadata = producer.get_job_metadata(&job_id)?;
-    assert_eq!(metadata.status, JobStatus::Cancelled);
+    let _metadata = producer.get_job_metadata(&job_id)?;
+    let status_reader = JobStatusReader::new(&get_redis_url(), "test_cancel")?;
+    let status = status_reader.get_job_status(&job_id)?;
+    assert_eq!(status, JobStatus::Canceled);
 
     producer.clean_job(&job_id)?;
     Ok(())
@@ -61,8 +67,10 @@ fn test_dispatch_scheduled_job() -> JonoResult<()> {
     producer.clean_job(&job_id)?;
     let job_id = producer.dispatch(plan)?;
 
-    let metadata = producer.get_job_metadata(&job_id)?;
-    assert_eq!(metadata.status, JobStatus::Scheduled);
+    let _metadata = producer.get_job_metadata(&job_id)?;
+    let status_reader = JobStatusReader::new(&get_redis_url(), "test_schedule")?;
+    let status = status_reader.get_job_status(&job_id)?;
+    assert_eq!(status, JobStatus::Scheduled);
 
     producer.clean_job(&job_id)?;
     Ok(())
@@ -107,5 +115,13 @@ fn test_clean_job() -> JonoResult<()> {
         exists_after.err().unwrap(),
         JonoError::NotFound(_)
     ));
+
+    let status_reader = JobStatusReader::new(&get_redis_url(), "test_clean")?;
+    let status_result = status_reader.get_job_status(&job_id);
+    assert!(matches!(
+        status_result.err().unwrap(),
+        JonoError::NotFound(_)
+    ));
+
     Ok(())
 }
