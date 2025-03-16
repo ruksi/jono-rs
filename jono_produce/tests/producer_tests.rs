@@ -1,18 +1,14 @@
 use jono_core::{
-    current_timestamp_ms, generate_job_id, get_redis_url, JobStatus, JobStatusReader, JonoError,
-    JonoResult,
+    current_timestamp_ms, generate_job_id, get_redis_url, JobStatus, JobStatusReader, JonoContext,
+    JonoError, JonoForum, JonoResult,
 };
 use jono_produce::{JobPlan, Producer};
 use serde_json::json;
 
-fn create_test_producer(topic: &str) -> Producer {
-    let redis_url = get_redis_url();
-    Producer::new(&redis_url, topic).expect("Failed to create Jono Producer")
-}
-
 #[test]
 fn test_dispatch_job() -> JonoResult<()> {
-    let producer = create_test_producer("test_dispatch");
+    let context = create_test_context("test_dispatch");
+    let producer = Producer::with_context(context.clone());
     let payload = json!({
         "action": "test_action",
         "data": "test_data"
@@ -26,7 +22,7 @@ fn test_dispatch_job() -> JonoResult<()> {
     let metadata = producer.get_job_metadata(&job_id)?;
     assert_eq!(metadata.payload, payload);
 
-    let status_reader = JobStatusReader::new(&get_redis_url(), "test_dispatch")?;
+    let status_reader = JobStatusReader::with_context(context);
     let status = status_reader.get_job_status(&job_id)?;
     assert_eq!(status, JobStatus::Queued);
 
@@ -36,7 +32,8 @@ fn test_dispatch_job() -> JonoResult<()> {
 
 #[test]
 fn test_cancel_dispatched_job() -> JonoResult<()> {
-    let producer = create_test_producer("test_cancel");
+    let context = create_test_context("test_cancel");
+    let producer = Producer::with_context(context.clone());
     let payload = json!({ "action": "cancel this soon!" });
 
     let plan = JobPlan::new(payload)?;
@@ -48,7 +45,7 @@ fn test_cancel_dispatched_job() -> JonoResult<()> {
     assert!(cancel_ok);
 
     let _metadata = producer.get_job_metadata(&job_id)?;
-    let status_reader = JobStatusReader::new(&get_redis_url(), "test_cancel")?;
+    let status_reader = JobStatusReader::with_context(context);
     let status = status_reader.get_job_status(&job_id)?;
     assert_eq!(status, JobStatus::Canceled);
 
@@ -58,7 +55,8 @@ fn test_cancel_dispatched_job() -> JonoResult<()> {
 
 #[test]
 fn test_dispatch_scheduled_job() -> JonoResult<()> {
-    let producer = create_test_producer("test_schedule");
+    let context = create_test_context("test_schedule");
+    let producer = Producer::with_context(context.clone());
     let payload = json!({ "action": "scheduled_action" });
     let future_time = current_timestamp_ms() + 10000;
 
@@ -68,7 +66,7 @@ fn test_dispatch_scheduled_job() -> JonoResult<()> {
     let job_id = producer.dispatch(plan)?;
 
     let _metadata = producer.get_job_metadata(&job_id)?;
-    let status_reader = JobStatusReader::new(&get_redis_url(), "test_schedule")?;
+    let status_reader = JobStatusReader::with_context(context);
     let status = status_reader.get_job_status(&job_id)?;
     assert_eq!(status, JobStatus::Scheduled);
 
@@ -78,7 +76,8 @@ fn test_dispatch_scheduled_job() -> JonoResult<()> {
 
 #[test]
 fn test_job_not_found() {
-    let producer = create_test_producer("test_not_found");
+    let context = create_test_context("test_not_found");
+    let producer = Producer::with_context(context);
     let unknown_job_id = generate_job_id();
 
     let metadata_result = producer.get_job_metadata(&unknown_job_id);
@@ -96,7 +95,8 @@ fn test_job_not_found() {
 
 #[test]
 fn test_clean_job() -> JonoResult<()> {
-    let producer = create_test_producer("test_clean");
+    let context = create_test_context("test_clean");
+    let producer = Producer::with_context(context.clone());
     let payload = json!({ "action": "clean this soon!" });
 
     let plan = JobPlan::new(payload)?;
@@ -116,7 +116,7 @@ fn test_clean_job() -> JonoResult<()> {
         JonoError::NotFound(_)
     ));
 
-    let status_reader = JobStatusReader::new(&get_redis_url(), "test_clean")?;
+    let status_reader = JobStatusReader::with_context(context);
     let status_result = status_reader.get_job_status(&job_id);
     assert!(matches!(
         status_result.err().unwrap(),
@@ -124,4 +124,10 @@ fn test_clean_job() -> JonoResult<()> {
     ));
 
     Ok(())
+}
+
+fn create_test_context(topic: &str) -> JonoContext {
+    let redis_url = get_redis_url();
+    let forum = JonoForum::new(&redis_url).expect("Failed to connect to Redis");
+    forum.topic(topic)
 }

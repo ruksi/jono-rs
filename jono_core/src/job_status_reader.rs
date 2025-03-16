@@ -1,35 +1,30 @@
 //! Provides functionality to query the status of jobs in the Jono queue system.
 
-use redis::{Client, Commands, Connection};
+use redis::{Commands, Connection};
 use serde_json::Value;
 
-use crate::{JobStatus, JonoError, JonoKeys, JonoResult};
+use crate::{JobStatus, JonoContext, JonoError, JonoResult};
 
 /// Interface for querying job status information
 pub struct JobStatusReader {
-    redis_client: Client,
-    topic: String,
+    context: JonoContext,
 }
 
 impl JobStatusReader {
-    /// Create a new job status reader with the given Redis URL and topic
-    pub fn new(redis_url: &str, topic: &str) -> JonoResult<Self> {
-        let redis_client = Client::open(redis_url).map_err(JonoError::Redis)?;
-        Ok(Self {
-            redis_client,
-            topic: topic.to_string(),
-        })
+    /// Create a new JobStatusReader with the given topic context
+    pub fn with_context(context: JonoContext) -> Self {
+        Self { context }
     }
 
     /// Get a Redis connection
     fn get_connection(&self) -> JonoResult<Connection> {
-        self.redis_client.get_connection().map_err(JonoError::Redis)
+        self.context.get_connection()
     }
 
     /// Check if a job exists
     pub fn job_exists(&self, job_id: &str) -> JonoResult<bool> {
         let mut conn = self.get_connection()?;
-        let keys = JonoKeys::with_topic(&self.topic);
+        let keys = self.context.keys();
 
         let exists: bool = conn
             .exists(keys.job_metadata_hash(job_id))
@@ -41,7 +36,7 @@ impl JobStatusReader {
     /// Get the current status of a job
     pub fn get_job_status(&self, job_id: &str) -> JonoResult<JobStatus> {
         let mut conn = self.get_connection()?;
-        let keys = JonoKeys::with_topic(&self.topic);
+        let keys = self.context.keys();
 
         let exists: bool = conn
             .exists(keys.job_metadata_hash(job_id))

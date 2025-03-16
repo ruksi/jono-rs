@@ -1,4 +1,5 @@
 /// Redis key generator for Jono components
+#[derive(Clone)]
 pub struct JonoKeys {
     prefix: String,
     topic: String,

@@ -2,7 +2,7 @@
 //!
 //! This crate allows users to submit jobs to the queue, cancel jobs, and set job priorities.
 
-use redis::{Client, Commands, Connection};
+use redis::{Commands, Connection};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashMap;
@@ -68,30 +68,25 @@ impl JobPlan {
 
 /// Interface for submitting jobs to Jono queues
 pub struct Producer {
-    redis_client: Client,
-    topic: String,
+    context: JonoContext,
 }
 
 impl Producer {
-    /// Create a new Jono Producer with the given Redis URL and topic
-    pub fn new(redis_url: &str, topic: &str) -> JonoResult<Self> {
-        let redis_client = Client::open(redis_url).map_err(JonoError::Redis)?;
-        Ok(Self {
-            redis_client,
-            topic: topic.to_string(),
-        })
+    /// Create a new Producer with the given topic context
+    pub fn with_context(context: JonoContext) -> Self {
+        Self { context }
     }
 
     /// Get a Redis connection
     fn get_connection(&self) -> JonoResult<Connection> {
-        self.redis_client.get_connection().map_err(JonoError::Redis)
+        self.context.get_connection()
     }
 
     /// Send a new job to the queue
     pub fn dispatch(&self, job_plan: JobPlan) -> JonoResult<String> {
         let mut conn = self.get_connection()?;
 
-        let keys = JonoKeys::with_topic(&self.topic);
+        let keys = self.context.keys();
         let now = current_timestamp_ms();
         let metadata_key = keys.job_metadata_hash(&job_plan.id);
 
@@ -154,7 +149,7 @@ impl Producer {
     /// Cancel a job if it hasn't started processing yet
     pub fn cancel(&self, job_id: &str, grace_period_ms: i64) -> JonoResult<bool> {
         let mut conn = self.get_connection()?;
-        let keys = JonoKeys::with_topic(&self.topic);
+        let keys = self.context.keys();
 
         let exists: bool = conn
             .exists(keys.job_metadata_hash(job_id))
@@ -209,7 +204,7 @@ impl Producer {
     /// Get job metadata
     pub fn get_job_metadata(&self, job_id: &str) -> JonoResult<JobMetadata> {
         let mut conn = self.get_connection()?;
-        let keys = JonoKeys::with_topic(&self.topic);
+        let keys = self.context.keys();
 
         let metadata_key = keys.job_metadata_hash(job_id);
         let exists: bool = conn.exists(&metadata_key).map_err(JonoError::Redis)?;
@@ -226,7 +221,7 @@ impl Producer {
     /// Clean up job data from Redis
     pub fn clean_job(&self, job_id: &str) -> JonoResult<bool> {
         let mut conn = self.get_connection()?;
-        let keys = JonoKeys::with_topic(&self.topic);
+        let keys = self.context.keys();
 
         let _: () = conn
             .zrem::<_, _, ()>(keys.queued_set(), job_id)
