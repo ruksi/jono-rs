@@ -2,8 +2,9 @@
 
 use redis::{Commands, Connection};
 use serde_json::Value;
+use std::collections::HashMap;
 
-use crate::{JobStatus, JonoContext, JonoError, JonoResult};
+use crate::{JobMetadata, JobStatus, JonoContext, JonoError, JonoResult};
 
 /// Interface for querying job details
 pub struct Inspector {
@@ -105,5 +106,21 @@ impl Inspector {
         }
 
         Ok(JobStatus::Failed)
+    }
+
+    /// Get job metadata
+    pub fn get_job_metadata(&self, job_id: &str) -> JonoResult<JobMetadata> {
+        let mut conn = self.get_connection()?;
+        let keys = self.context.keys();
+
+        let metadata_key = keys.job_metadata_hash(job_id);
+        let exists: bool = conn.exists(&metadata_key).map_err(JonoError::Redis)?;
+        if !exists {
+            return Err(JonoError::NotFound(format!("Job {} not found", job_id)));
+        }
+
+        let hash: HashMap<String, String> =
+            conn.hgetall(&metadata_key).map_err(JonoError::Redis)?;
+        JobMetadata::from_hash(hash)
     }
 }

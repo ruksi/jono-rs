@@ -9,45 +9,22 @@ use serde_json::json;
 fn test_dispatch_job() -> JonoResult<()> {
     let context = create_test_context("test_dispatch");
     let producer = Producer::with_context(context.clone());
+    let inspector = Inspector::with_context(context);
+
     let payload = json!({
         "action": "test_action",
-        "data": "test_data"
+        "one": 1,
+        "two": 2,
+        "three": 3
     });
-
     let plan = JobPlan::new(&payload)?;
     let job_id = plan.id.clone();
     producer.clean_job(&job_id)?;
-    let job_id = producer.dispatch(plan)?;
+    let job_id = producer.dispatch_job(plan)?;
 
-    let metadata = producer.get_job_metadata(&job_id)?;
+    let metadata = inspector.get_job_metadata(&job_id)?;
     assert_eq!(metadata.payload, payload);
-
-    let inspector = Inspector::with_context(context);
-    let status = inspector.get_job_status(&job_id)?;
-    assert_eq!(status, JobStatus::Queued);
-
-    producer.clean_job(&job_id)?;
-    Ok(())
-}
-
-#[test]
-fn test_cancel_dispatched_job() -> JonoResult<()> {
-    let context = create_test_context("test_cancel");
-    let producer = Producer::with_context(context.clone());
-    let payload = json!({ "action": "cancel this soon!" });
-
-    let plan = JobPlan::new(payload)?;
-    let job_id = plan.id.clone();
-    producer.clean_job(&job_id)?;
-    let job_id = producer.dispatch(plan)?;
-
-    let cancel_ok = producer.cancel(&job_id, 0)?;
-    assert!(cancel_ok);
-
-    let _metadata = producer.get_job_metadata(&job_id)?;
-    let inspector = Inspector::with_context(context);
-    let status = inspector.get_job_status(&job_id)?;
-    assert_eq!(status, JobStatus::Canceled);
+    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
 
     producer.clean_job(&job_id)?;
     Ok(())
@@ -57,16 +34,17 @@ fn test_cancel_dispatched_job() -> JonoResult<()> {
 fn test_dispatch_scheduled_job() -> JonoResult<()> {
     let context = create_test_context("test_schedule");
     let producer = Producer::with_context(context.clone());
-    let payload = json!({ "action": "scheduled_action" });
-    let future_time = current_timestamp_ms() + 10000;
+    let inspector = Inspector::with_context(context);
 
+    let payload = json!({ "action": "run this later!" });
+    let future_time = current_timestamp_ms() + 10000;
     let plan = JobPlan::new(payload)?.schedule_for(future_time);
     let job_id = plan.id.clone();
     producer.clean_job(&job_id)?;
-    let job_id = producer.dispatch(plan)?;
+    let job_id = producer.dispatch_job(plan)?;
 
-    let _metadata = producer.get_job_metadata(&job_id)?;
-    let inspector = Inspector::with_context(context);
+    assert!(inspector.job_exists(&job_id)?);
+    inspector.get_job_metadata(&job_id)?;
     let status = inspector.get_job_status(&job_id)?;
     assert_eq!(status, JobStatus::Scheduled);
 
@@ -75,55 +53,76 @@ fn test_dispatch_scheduled_job() -> JonoResult<()> {
 }
 
 #[test]
-fn test_job_not_found() {
-    let context = create_test_context("test_not_found");
-    let producer = Producer::with_context(context);
-    let unknown_job_id = generate_job_id();
+fn test_cancel_job() -> JonoResult<()> {
+    let context = create_test_context("test_cancel");
+    let producer = Producer::with_context(context.clone());
+    let inspector = Inspector::with_context(context);
 
-    let metadata_result = producer.get_job_metadata(&unknown_job_id);
-    assert!(matches!(
-        metadata_result.err().unwrap(),
-        JonoError::NotFound(_)
-    ));
+    let payload = json!({ "action": "cancel this soon!" });
+    let plan = JobPlan::new(payload)?;
+    let job_id = plan.id.clone();
+    producer.clean_job(&job_id)?;
+    let job_id = producer.dispatch_job(plan)?;
 
-    let cancel_result = producer.cancel(&unknown_job_id, 0);
-    assert!(matches!(
-        cancel_result.err().unwrap(),
-        JonoError::NotFound(_)
-    ));
+    assert!(producer.cancel_job(&job_id, 0).is_ok());
+
+    assert!(inspector.job_exists(&job_id)?);
+    inspector.get_job_metadata(&job_id)?;
+    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Canceled);
+
+    producer.clean_job(&job_id)?;
+    Ok(())
 }
 
 #[test]
 fn test_clean_job() -> JonoResult<()> {
     let context = create_test_context("test_clean");
     let producer = Producer::with_context(context.clone());
-    let payload = json!({ "action": "clean this soon!" });
+    let inspector = Inspector::with_context(context);
 
+    let payload = json!({ "action": "clean this soon!" });
     let plan = JobPlan::new(payload)?;
     let job_id = plan.id.clone();
     producer.clean_job(&job_id)?;
-    let job_id = producer.dispatch(plan)?;
+    let job_id = producer.dispatch_job(plan)?;
 
-    let exists_before = producer.get_job_metadata(&job_id).is_ok();
-    assert!(exists_before);
+    // before clean
+    assert!(inspector.job_exists(&job_id)?);
+    assert!(inspector.get_job_metadata(&job_id).is_ok());
+    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
 
-    let clean_ok = producer.clean_job(&job_id)?;
-    assert!(clean_ok);
+    // clean
+    assert!(producer.clean_job(&job_id)?);
 
-    let exists_after = producer.get_job_metadata(&job_id);
+    // after clean
+    assert!(!inspector.job_exists(&job_id)?);
     assert!(matches!(
-        exists_after.err().unwrap(),
+        inspector.get_job_metadata(&job_id).err().unwrap(),
         JonoError::NotFound(_)
     ));
-
-    let inspector = Inspector::with_context(context);
-    let status_result = inspector.get_job_status(&job_id);
     assert!(matches!(
-        status_result.err().unwrap(),
+        inspector.get_job_status(&job_id).err().unwrap(),
         JonoError::NotFound(_)
     ));
 
     Ok(())
+}
+
+#[test]
+fn test_job_not_found() {
+    let context = create_test_context("test_not_found");
+    let producer = Producer::with_context(context.clone());
+    let inspector = Inspector::with_context(context);
+
+    let unknown_job_id = generate_job_id();
+    assert!(matches!(
+        inspector.get_job_metadata(&unknown_job_id).err().unwrap(),
+        JonoError::NotFound(_)
+    ));
+    assert!(matches!(
+        producer.cancel_job(&unknown_job_id, 0).err().unwrap(),
+        JonoError::NotFound(_)
+    ));
 }
 
 fn create_test_context(topic: &str) -> JonoContext {

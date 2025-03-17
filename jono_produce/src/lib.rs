@@ -5,7 +5,6 @@
 use redis::{Commands, Connection};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
-use std::collections::HashMap;
 use tracing::info;
 
 use jono_core::*;
@@ -83,7 +82,7 @@ impl Producer {
     }
 
     /// Send a new job to the queue
-    pub fn dispatch(&self, job_plan: JobPlan) -> JonoResult<String> {
+    pub fn dispatch_job(&self, job_plan: JobPlan) -> JonoResult<String> {
         let mut conn = self.get_connection()?;
 
         let keys = self.context.keys();
@@ -147,7 +146,7 @@ impl Producer {
     }
 
     /// Cancel a job if it hasn't started processing yet
-    pub fn cancel(&self, job_id: &str, grace_period_ms: i64) -> JonoResult<bool> {
+    pub fn cancel_job(&self, job_id: &str, grace_period_ms: i64) -> JonoResult<bool> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
@@ -199,23 +198,6 @@ impl Producer {
 
         info!(job_id = %job_id, "Job not found in any active queue");
         Ok(false)
-    }
-
-    /// Get job metadata
-    pub fn get_job_metadata(&self, job_id: &str) -> JonoResult<JobMetadata> {
-        let mut conn = self.get_connection()?;
-        let keys = self.context.keys();
-
-        let metadata_key = keys.job_metadata_hash(job_id);
-        let exists: bool = conn.exists(&metadata_key).map_err(JonoError::Redis)?;
-        if !exists {
-            return Err(JonoError::NotFound(format!("Job {} not found", job_id)));
-        }
-
-        let metadata_map: HashMap<String, String> =
-            conn.hgetall(metadata_key).map_err(JonoError::Redis)?;
-
-        Ok(JobMetadata::from_hash(metadata_map)?)
     }
 
     /// Clean up job data from Redis
