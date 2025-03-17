@@ -1,6 +1,6 @@
 use jono_core::{
-    current_timestamp_ms, generate_job_id, get_redis_url, JobStatus, JobStatusReader, JonoContext,
-    JonoError, JonoForum, JonoResult,
+    current_timestamp_ms, generate_job_id, get_redis_url, Inspector, JobStatus, JonoContext, JonoError,
+    JonoForum, JonoResult,
 };
 use jono_produce::{JobPlan, Producer};
 use serde_json::json;
@@ -22,8 +22,8 @@ fn test_dispatch_job() -> JonoResult<()> {
     let metadata = producer.get_job_metadata(&job_id)?;
     assert_eq!(metadata.payload, payload);
 
-    let status_reader = JobStatusReader::with_context(context);
-    let status = status_reader.get_job_status(&job_id)?;
+    let inspector = Inspector::with_context(context);
+    let status = inspector.get_job_status(&job_id)?;
     assert_eq!(status, JobStatus::Queued);
 
     producer.clean_job(&job_id)?;
@@ -45,8 +45,8 @@ fn test_cancel_dispatched_job() -> JonoResult<()> {
     assert!(cancel_ok);
 
     let _metadata = producer.get_job_metadata(&job_id)?;
-    let status_reader = JobStatusReader::with_context(context);
-    let status = status_reader.get_job_status(&job_id)?;
+    let inspector = Inspector::with_context(context);
+    let status = inspector.get_job_status(&job_id)?;
     assert_eq!(status, JobStatus::Canceled);
 
     producer.clean_job(&job_id)?;
@@ -66,8 +66,8 @@ fn test_dispatch_scheduled_job() -> JonoResult<()> {
     let job_id = producer.dispatch(plan)?;
 
     let _metadata = producer.get_job_metadata(&job_id)?;
-    let status_reader = JobStatusReader::with_context(context);
-    let status = status_reader.get_job_status(&job_id)?;
+    let inspector = Inspector::with_context(context);
+    let status = inspector.get_job_status(&job_id)?;
     assert_eq!(status, JobStatus::Scheduled);
 
     producer.clean_job(&job_id)?;
@@ -116,8 +116,8 @@ fn test_clean_job() -> JonoResult<()> {
         JonoError::NotFound(_)
     ));
 
-    let status_reader = JobStatusReader::with_context(context);
-    let status_result = status_reader.get_job_status(&job_id);
+    let inspector = Inspector::with_context(context);
+    let status_result = inspector.get_job_status(&job_id);
     assert!(matches!(
         status_result.err().unwrap(),
         JonoError::NotFound(_)

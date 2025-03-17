@@ -1,27 +1,27 @@
-//! Provides functionality to query the status of jobs in the Jono queue system.
+//! Provides functionality to query details jobs in the Jono queue system.
 
 use redis::{Commands, Connection};
 use serde_json::Value;
 
 use crate::{JobStatus, JonoContext, JonoError, JonoResult};
 
-/// Interface for querying job status information
-pub struct JobStatusReader {
+/// Interface for querying job details
+pub struct Inspector {
     context: JonoContext,
 }
 
-impl JobStatusReader {
-    /// Create a new JobStatusReader with the given topic context
+impl Inspector {
+    /// Create a new job inspector in the given topic context
     pub fn with_context(context: JonoContext) -> Self {
         Self { context }
     }
 
-    /// Get a Redis connection
+    /// Return a Redis connection
     fn get_connection(&self) -> JonoResult<Connection> {
         self.context.get_connection()
     }
 
-    /// Check if a job exists
+    /// Return if a job exists
     pub fn job_exists(&self, job_id: &str) -> JonoResult<bool> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
