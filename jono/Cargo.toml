@@ -13,3 +13,7 @@ produce = ["dep:jono_produce"]
 [dependencies]
 jono_core = { path = "../jono_core" }
 jono_produce = { path = "../jono_produce", default-features = false, optional = true }
+
+[dev-dependencies]
+serde.workspace = true
+serde_json.workspace = true

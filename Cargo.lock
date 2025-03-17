@@ -231,6 +231,8 @@ version = "0.1.0"
 dependencies = [
  "jono_core",
  "jono_produce",
+ "serde",
+ "serde_json",
 ]
 
 [[package]]
