@@ -103,16 +103,10 @@ fn test_clean_job() -> Result<()> {
 }
 
 #[test]
-fn test_job_not_found() {
+fn test_job_not_found_for_cancel() {
     let context = create_test_context("test_not_found");
     let producer = Producer::with_context(context.clone());
-    let inspector = Inspector::with_context(context);
-
     let unknown_job_id = generate_job_id();
-    assert!(matches!(
-        inspector.get_job_metadata(&unknown_job_id).err().unwrap(),
-        Error::NotFound(_)
-    ));
     assert!(matches!(
         producer.cancel_job(&unknown_job_id, 0).err().unwrap(),
         Error::NotFound(_)
