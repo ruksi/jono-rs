@@ -1,4 +1,4 @@
-use crate::error::{JonoError, JonoResult};
+use crate::error::{Error, Result};
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
 
@@ -29,23 +29,23 @@ pub struct JobMetadata {
 
 impl JobMetadata {
     /// Convert a Redis hash into more structured job metadata
-    pub fn from_hash(hash: HashMap<String, String>) -> JonoResult<Self> {
+    pub fn from_hash(hash: HashMap<String, String>) -> Result<Self> {
         let id = hash
             .get("id")
-            .ok_or_else(|| JonoError::InvalidJob("Missing id field".to_string()))?
+            .ok_or_else(|| Error::InvalidJob("Missing id field".to_string()))?
             .clone();
 
         let payload_str = hash
             .get("payload")
-            .ok_or_else(|| JonoError::InvalidJob("Missing payload field".to_string()))?;
+            .ok_or_else(|| Error::InvalidJob("Missing payload field".to_string()))?;
         let payload = serde_json::from_str(payload_str)
-            .map_err(|_| JonoError::InvalidJob("Invalid payload JSON".to_string()))?;
+            .map_err(|_| Error::InvalidJob("Invalid payload JSON".to_string()))?;
 
         let max_attempts = hash
             .get("max_attempts")
-            .ok_or_else(|| JonoError::InvalidJob("Missing max_attempts field".to_string()))?
+            .ok_or_else(|| Error::InvalidJob("Missing max_attempts field".to_string()))?
             .parse::<u32>()
-            .map_err(|_| JonoError::InvalidJob("Invalid max_attempts".to_string()))?;
+            .map_err(|_| Error::InvalidJob("Invalid max_attempts".to_string()))?;
 
         let attempt_count = hash
             .get("attempt_count")
@@ -54,15 +54,15 @@ impl JobMetadata {
 
         let initial_priority = hash
             .get("initial_priority")
-            .ok_or_else(|| JonoError::InvalidJob("Missing initial_priority field".to_string()))?
+            .ok_or_else(|| Error::InvalidJob("Missing initial_priority field".to_string()))?
             .parse::<i64>()
-            .map_err(|_| JonoError::InvalidJob("Invalid initial_priority".to_string()))?;
+            .map_err(|_| Error::InvalidJob("Invalid initial_priority".to_string()))?;
 
         let outcome_str = hash
             .get("outcome")
-            .ok_or_else(|| JonoError::InvalidJob("Missing outcome field".to_string()))?;
+            .ok_or_else(|| Error::InvalidJob("Missing outcome field".to_string()))?;
         let outcome = serde_json::from_str(outcome_str)
-            .map_err(|_| JonoError::InvalidJob("Invalid outcome JSON".to_string()))?;
+            .map_err(|_| Error::InvalidJob("Invalid outcome JSON".to_string()))?;
 
         Ok(Self {
             id,

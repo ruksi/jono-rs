@@ -1,11 +1,11 @@
 /// Redis key generator for Jono components
 #[derive(Clone)]
-pub struct JonoKeys {
+pub struct Keys {
     prefix: String,
     topic: String,
 }
 
-impl JonoKeys {
+impl Keys {
     /// Create a new Redis key generator with the default "jono" prefix and over given topic
     pub fn with_topic(topic: &str) -> Self {
         Self {

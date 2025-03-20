@@ -23,7 +23,7 @@ pub struct JobPlan {
 
 impl JobPlan {
     /// Create a new job plan with the given payload for immediate execution
-    pub fn new<T: Serialize>(payload: T) -> JonoResult<Self> {
+    pub fn new<T: Serialize>(payload: T) -> Result<Self> {
         let payload = serde_json::to_value(payload)?;
         Ok(Self {
             id: generate_job_id(),

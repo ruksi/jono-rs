@@ -1,14 +1,11 @@
-use redis::RedisError;
-use thiserror::Error;
-
 /// Return for Jono operations that can succeed (OK) or fail (Err)
-pub type JonoResult<T> = Result<T, JonoError>;
+pub type Result<T> = std::result::Result<T, Error>;
 
 /// All the possible errors from Jono operations
-#[derive(Error, Debug)]
-pub enum JonoError {
+#[derive(thiserror::Error, Debug)]
+pub enum Error {
     #[error("Redis error: {0}")]
-    Redis(#[from] RedisError),
+    Redis(#[from] redis::RedisError),
     #[error("Serialization error: {0}")]
     Serialization(#[from] serde_json::Error),
     #[error("Job not found: {0}")]

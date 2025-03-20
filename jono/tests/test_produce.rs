@@ -5,7 +5,7 @@ use jono_core::{current_timestamp_ms, generate_job_id, get_redis_url};
 use serde_json::json;
 
 #[test]
-fn test_dispatch_job() -> JonoResult<()> {
+fn test_dispatch_job() -> Result<()> {
     let context = create_test_context("test_dispatch");
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
@@ -25,7 +25,7 @@ fn test_dispatch_job() -> JonoResult<()> {
 }
 
 #[test]
-fn test_dispatch_scheduled_job() -> JonoResult<()> {
+fn test_dispatch_scheduled_job() -> Result<()> {
     let context = create_test_context("test_schedule");
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
@@ -47,7 +47,7 @@ fn test_dispatch_scheduled_job() -> JonoResult<()> {
 }
 
 #[test]
-fn test_cancel_job() -> JonoResult<()> {
+fn test_cancel_job() -> Result<()> {
     let context = create_test_context("test_cancel");
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
@@ -69,7 +69,7 @@ fn test_cancel_job() -> JonoResult<()> {
 }
 
 #[test]
-fn test_clean_job() -> JonoResult<()> {
+fn test_clean_job() -> Result<()> {
     let context = create_test_context("test_clean");
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
@@ -92,11 +92,11 @@ fn test_clean_job() -> JonoResult<()> {
     assert!(!inspector.job_exists(&job_id)?);
     assert!(matches!(
         inspector.get_job_metadata(&job_id).err().unwrap(),
-        JonoError::NotFound(_)
+        Error::NotFound(_)
     ));
     assert!(matches!(
         inspector.get_job_status(&job_id).err().unwrap(),
-        JonoError::NotFound(_)
+        Error::NotFound(_)
     ));
 
     Ok(())
@@ -111,16 +111,16 @@ fn test_job_not_found() {
     let unknown_job_id = generate_job_id();
     assert!(matches!(
         inspector.get_job_metadata(&unknown_job_id).err().unwrap(),
-        JonoError::NotFound(_)
+        Error::NotFound(_)
     ));
     assert!(matches!(
         producer.cancel_job(&unknown_job_id, 0).err().unwrap(),
-        JonoError::NotFound(_)
+        Error::NotFound(_)
     ));
 }
 
-fn create_test_context(topic: &str) -> JonoContext {
+fn create_test_context(topic: &str) -> Context {
     let redis_url = get_redis_url();
-    let forum = JonoForum::new(&redis_url).expect("Failed to connect to Redis");
+    let forum = Forum::new(&redis_url).expect("Failed to connect to Redis");
     forum.topic(topic)
 }

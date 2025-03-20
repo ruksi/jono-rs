@@ -8,13 +8,13 @@ use std::sync::Arc;
 struct NoopWorker;
 
 impl Worker for NoopWorker {
-    fn handle_job(&self, _workload: Workload) -> JonoResult<Outcome> {
+    fn handle_job(&self, _workload: Workload) -> Result<Outcome> {
         Ok(Outcome::Success(Some(json!({"processed": true}))))
     }
 }
 
 #[test]
-fn test_nonexistent_job() -> JonoResult<()> {
+fn test_nonexistent_job() -> Result<()> {
     let context = create_test_context("test_consume");
     let consumer = Consumer::with_context(context, Arc::new(NoopWorker));
 
@@ -37,7 +37,7 @@ fn test_nonexistent_job() -> JonoResult<()> {
 }
 
 #[test]
-fn test_basics() -> JonoResult<()> {
+fn test_basics() -> Result<()> {
     let context = create_test_context("test_consume");
     let inspector = Inspector::with_context(context.clone());
     let producer = Producer::with_context(context.clone());
@@ -61,8 +61,8 @@ fn test_basics() -> JonoResult<()> {
     Ok(())
 }
 
-fn create_test_context(topic: &str) -> JonoContext {
+fn create_test_context(topic: &str) -> Context {
     let redis_url = get_redis_url();
-    let forum = JonoForum::new(&redis_url).expect("Failed to connect to Redis");
+    let forum = Forum::new(&redis_url).expect("Failed to connect to Redis");
     forum.topic(topic)
 }

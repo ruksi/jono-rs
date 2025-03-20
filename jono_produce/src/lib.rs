@@ -9,6 +9,5 @@ pub use job_plan::JobPlan;
 pub use worker::Producer;
 
 pub mod prelude {
-    pub use crate::JobPlan;
-    pub use crate::Producer;
+    pub use crate::{JobPlan, Producer};
 }

@@ -5,22 +5,22 @@ use tracing::info;
 
 /// Interface for submitting jobs to Jono queues
 pub struct Producer {
-    context: JonoContext,
+    context: Context,
 }
 
 impl Producer {
     /// Create a new Producer with the given topic context
-    pub fn with_context(context: JonoContext) -> Self {
+    pub fn with_context(context: Context) -> Self {
         Self { context }
     }
 
     /// Get a Redis connection
-    fn get_connection(&self) -> JonoResult<Connection> {
+    fn get_connection(&self) -> Result<Connection> {
         self.context.get_connection()
     }
 
     /// Send a new job to the queue
-    pub fn dispatch_job(&self, job_plan: JobPlan) -> JonoResult<String> {
+    pub fn dispatch_job(&self, job_plan: JobPlan) -> Result<String> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
@@ -47,12 +47,12 @@ impl Producer {
             .hset(&metadata_key, "attempt_history", "[]")
             .hset(&metadata_key, "outcome", "null")
             .query(&mut conn)
-            .map_err(JonoError::Redis)?;
+            .map_err(Error::Redis)?;
 
         if job_plan.scheduled_for > 0 && job_plan.scheduled_for > now {
             let _: () = conn
                 .zadd::<_, _, _, ()>(keys.scheduled_set(), &job_plan.id, job_plan.scheduled_for)
-                .map_err(JonoError::Redis)?;
+                .map_err(Error::Redis)?;
 
             info!(
                 job_id = %job_plan.id,
@@ -62,7 +62,7 @@ impl Producer {
         } else {
             let _: () = conn
                 .zadd::<_, _, _, ()>(keys.queued_set(), &job_plan.id, job_plan.priority)
-                .map_err(JonoError::Redis)?;
+                .map_err(Error::Redis)?;
 
             info!(
                 job_id = %job_plan.id,
@@ -75,15 +75,15 @@ impl Producer {
     }
 
     /// Cancel a job if it hasn't started processing yet
-    pub fn cancel_job(&self, job_id: &str, grace_period_ms: i64) -> JonoResult<bool> {
+    pub fn cancel_job(&self, job_id: &str, grace_period_ms: i64) -> Result<bool> {
         let mut conn = self.get_connection()?;
         let now = current_timestamp_ms();
         let keys = self.context.keys();
         let metadata_key = keys.job_metadata_hash(job_id);
 
-        let exists: bool = conn.exists(metadata_key).map_err(JonoError::Redis)?;
+        let exists: bool = conn.exists(metadata_key).map_err(Error::Redis)?;
         if !exists {
-            return Err(JonoError::NotFound(format!("Job {} not found", job_id)));
+            return Err(Error::NotFound(format!("Job {} not found", job_id)));
         }
 
         #[rustfmt::skip]
@@ -93,13 +93,13 @@ impl Producer {
                 .zrem(keys.scheduled_set(), job_id)
                 .zscore(keys.running_set(), job_id)
                 .query(&mut conn)
-                .map_err(JonoError::Redis)?;
+                .map_err(Error::Redis)?;
 
         if last_heartbeat.is_some() {
             let grace_end = now + grace_period_ms;
             let _: () = conn
                 .zadd::<_, _, _, ()>(keys.canceled_set(), job_id, grace_end)
-                .map_err(JonoError::Redis)?;
+                .map_err(Error::Redis)?;
             info!(
                 job_id = %job_id,
                 grace_end = %grace_end,
@@ -111,7 +111,7 @@ impl Producer {
         if removed_from_queued > 0 || removed_from_scheduled > 0 {
             let _: () = conn
                 .zadd::<_, _, _, ()>(keys.canceled_set(), job_id, now)
-                .map_err(JonoError::Redis)?;
+                .map_err(Error::Redis)?;
             info!(job_id = %job_id, "Job canceled successfully");
             return Ok(true);
         }
@@ -121,7 +121,7 @@ impl Producer {
     }
 
     /// Clean up job data from Redis
-    pub fn clean_job(&self, job_id: &str) -> JonoResult<bool> {
+    pub fn clean_job(&self, job_id: &str) -> Result<bool> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
@@ -133,7 +133,7 @@ impl Producer {
             .zrem(keys.canceled_set(), job_id).ignore()
             .del(keys.job_metadata_hash(job_id))
             .query(&mut conn)
-            .map_err(JonoError::Redis)?;
+            .map_err(Error::Redis)?;
 
         Ok(metadata_deleted > 0)
     }

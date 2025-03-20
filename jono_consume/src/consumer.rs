@@ -1,27 +1,26 @@
 use crate::{Outcome, Worker, Workload};
-use jono_core::{Inspector, JobMetadata, JonoContext, JonoError, JonoResult, current_timestamp_ms};
+use jono_core::{Context, Error, Inspector, JobMetadata, Result, current_timestamp_ms};
 use redis::{Commands, Connection};
 use serde_json::json;
 use std::sync::Arc;
 
 /// Interface for getting, processing and resolving jobs from Jono queues.
 pub struct Consumer {
-    context: JonoContext,
+    context: Context,
     handler: Arc<dyn Worker>,
 }
 
 impl Consumer {
-    pub fn with_context(context: JonoContext, handler: Arc<dyn Worker>) -> Self {
+    pub fn with_context(context: Context, handler: Arc<dyn Worker>) -> Self {
         Self { context, handler }
     }
 
-    pub fn acquire_next_job(&self) -> JonoResult<Option<JobMetadata>> {
+    pub fn acquire_next_job(&self) -> Result<Option<JobMetadata>> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
-        let entries: Vec<(String, i64)> = conn
-            .zpopmin(keys.queued_set(), 1)
-            .map_err(JonoError::Redis)?;
+        let entries: Vec<(String, i64)> =
+            conn.zpopmin(keys.queued_set(), 1).map_err(Error::Redis)?;
 
         if let Some((job_id, _)) = entries.first() {
             let inspector = Inspector::with_context(self.context.clone());
@@ -33,7 +32,7 @@ impl Consumer {
         }
     }
 
-    pub fn process_job(&self, metadata: JobMetadata) -> JonoResult<Outcome> {
+    pub fn process_job(&self, metadata: JobMetadata) -> Result<Outcome> {
         let workload = Workload {
             metadata: metadata.clone(),
             context: self.context.clone(),
@@ -64,7 +63,7 @@ impl Consumer {
         outcome
     }
 
-    fn start_job(&self, job_id: &str) -> JonoResult<()> {
+    fn start_job(&self, job_id: &str) -> Result<()> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
@@ -76,17 +75,17 @@ impl Consumer {
             .hset(&metadata_key, "status", "running")
             .hset(&metadata_key, "started_at", now.to_string())
             .query(&mut conn)
-            .map_err(JonoError::Redis)?;
+            .map_err(Error::Redis)?;
 
         Ok(())
     }
 
-    fn complete_job(&self, job_id: &str, outcome: Option<serde_json::Value>) -> JonoResult<()> {
+    fn complete_job(&self, job_id: &str, outcome: Option<serde_json::Value>) -> Result<()> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
         let out_data = outcome.unwrap_or(json!(null));
-        let out_json = serde_json::to_string(&out_data).map_err(JonoError::Serialization)?;
+        let out_json = serde_json::to_string(&out_data).map_err(Error::Serialization)?;
         let metadata_key = keys.job_metadata_hash(job_id);
 
         let now = current_timestamp_ms();
@@ -95,12 +94,12 @@ impl Consumer {
             .hset(&metadata_key, "completed_at", now.to_string())
             .hset(&metadata_key, "outcome", out_json)
             .query(&mut conn)
-            .map_err(JonoError::Redis)?;
+            .map_err(Error::Redis)?;
 
         Ok(())
     }
 
-    fn get_connection(&self) -> JonoResult<Connection> {
+    fn get_connection(&self) -> Result<Connection> {
         self.context.get_connection()
     }
 }

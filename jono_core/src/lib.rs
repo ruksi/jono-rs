@@ -12,17 +12,16 @@ mod job_status;
 mod keys;
 mod util;
 
-pub use context::JonoContext;
-pub use error::{JonoError, JonoResult};
-pub use forum::JonoForum;
+pub use context::Context;
+pub use error::{Error, Result};
+pub use forum::Forum;
 pub use inspector::Inspector;
 pub use job_metadata::JobMetadata;
 pub use job_status::JobStatus;
-pub use keys::JonoKeys;
+pub use keys::Keys;
 pub use util::{current_timestamp_ms, generate_job_id, get_redis_url};
 
 pub mod prelude {
-    pub use crate::{
-        Inspector, JobMetadata, JobStatus, JonoContext, JonoError, JonoForum, JonoResult,
-    };
+    pub use crate::{Context, Forum, Inspector, JobMetadata, JobStatus};
+    pub use crate::{Error, Result};
 }
