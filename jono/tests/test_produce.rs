@@ -1,5 +1,5 @@
-#[cfg(feature = "produce")]
-mod producer_tests {
+#[cfg(all(feature = "produce", feature = "consume"))]
+mod jono_tests {
     use jono::prelude::*;
     use jono_core::{current_timestamp_ms, generate_job_id, get_redis_url};
     use serde_json::json;

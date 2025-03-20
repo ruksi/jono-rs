@@ -7,12 +7,14 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["produce"]
+default = ["produce", "consume"]
 produce = ["dep:jono_produce"]
+consume = ["dep:jono_consume"]
 
 [dependencies]
 jono_core = { path = "../jono_core" }
 jono_produce = { path = "../jono_produce", default-features = false, optional = true }
+jono_consume = { path = "../jono_consume", default-features = false, optional = true }
 
 [dev-dependencies]
 serde.workspace = true

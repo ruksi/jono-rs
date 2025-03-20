@@ -11,14 +11,20 @@ pub struct JobMetadata {
     /// The job JSON payload
     pub payload: serde_json::Value,
 
-    /// Maximum number of attempts allowed
+    /// The maximum number of attempts allowed
     pub max_attempts: u32,
+
+    /// Priority; lower values are processed first
+    pub initial_priority: i64,
 
     /// Current number of attempts made
     pub attempt_count: u32,
 
-    /// Priority (lower values are processed first)
-    pub initial_priority: i64,
+    // Keeping track what made attempts fail
+    pub attempt_history: Vec<serde_json::Value>,
+
+    // Result on job completion from the worker
+    pub outcome: Option<serde_json::Value>,
 }
 
 impl JobMetadata {
@@ -32,7 +38,6 @@ impl JobMetadata {
         let payload_str = hash
             .get("payload")
             .ok_or_else(|| JonoError::InvalidJob("Missing payload field".to_string()))?;
-
         let payload = serde_json::from_str(payload_str)
             .map_err(|_| JonoError::InvalidJob("Invalid payload JSON".to_string()))?;
 
@@ -53,12 +58,20 @@ impl JobMetadata {
             .parse::<i64>()
             .map_err(|_| JonoError::InvalidJob("Invalid initial_priority".to_string()))?;
 
+        let outcome_str = hash
+            .get("outcome")
+            .ok_or_else(|| JonoError::InvalidJob("Missing outcome field".to_string()))?;
+        let outcome = serde_json::from_str(outcome_str)
+            .map_err(|_| JonoError::InvalidJob("Invalid outcome JSON".to_string()))?;
+
         Ok(Self {
             id,
             payload,
             max_attempts,
             attempt_count,
             initial_priority,
+            attempt_history: vec![],
+            outcome,
         })
     }
 }

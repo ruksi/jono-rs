@@ -23,6 +23,6 @@ pub use util::{current_timestamp_ms, generate_job_id, get_redis_url};
 
 pub mod prelude {
     pub use crate::{
-        JobMetadata, JobStatus, Inspector, JonoContext, JonoError, JonoForum, JonoResult,
+        Inspector, JobMetadata, JobStatus, JonoContext, JonoError, JonoForum, JonoResult,
     };
 }

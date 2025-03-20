@@ -12,17 +12,10 @@ pub struct Inspector {
 }
 
 impl Inspector {
-    /// Create a new job inspector in the given topic context
     pub fn with_context(context: JonoContext) -> Self {
         Self { context }
     }
 
-    /// Return a Redis connection
-    fn get_connection(&self) -> JonoResult<Connection> {
-        self.context.get_connection()
-    }
-
-    /// Return if a job exists
     pub fn job_exists(&self, job_id: &str) -> JonoResult<bool> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
@@ -34,7 +27,17 @@ impl Inspector {
         Ok(exists)
     }
 
-    /// Get the current status of a job
+    pub fn job_is_canceled(&self, job_id: &str) -> JonoResult<bool> {
+        let mut conn = self.get_connection()?;
+        let keys = self.context.keys();
+
+        let score: Option<i64> = conn
+            .zscore(keys.cancelled_set(), job_id)
+            .map_err(JonoError::Redis)?;
+
+        Ok(score.is_some())
+    }
+
     pub fn get_job_status(&self, job_id: &str) -> JonoResult<JobStatus> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
@@ -108,7 +111,6 @@ impl Inspector {
         Ok(JobStatus::Failed)
     }
 
-    /// Get job metadata
     pub fn get_job_metadata(&self, job_id: &str) -> JonoResult<JobMetadata> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
@@ -122,5 +124,9 @@ impl Inspector {
         let hash: HashMap<String, String> =
             conn.hgetall(&metadata_key).map_err(JonoError::Redis)?;
         JobMetadata::from_hash(hash)
+    }
+
+    fn get_connection(&self) -> JonoResult<Connection> {
+        self.context.get_connection()
     }
 }

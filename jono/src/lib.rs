@@ -15,9 +15,15 @@ pub use jono_core as core;
 #[cfg(feature = "produce")]
 pub use jono_produce as produce;
 
+#[cfg(feature = "consume")]
+pub use jono_consume as consume;
+
 pub mod prelude {
     pub use crate::core::prelude::*;
 
     #[cfg(feature = "produce")]
     pub use crate::produce::prelude::*;
+
+    #[cfg(feature = "consume")]
+    pub use crate::consume::prelude::*;
 }

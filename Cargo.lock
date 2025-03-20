@@ -229,8 +229,19 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 name = "jono"
 version = "0.1.0"
 dependencies = [
+ "jono_consume",
  "jono_core",
  "jono_produce",
+ "serde",
+ "serde_json",
+]
+
+[[package]]
+name = "jono_consume"
+version = "0.1.0"
+dependencies = [
+ "jono_core",
+ "redis",
  "serde",
  "serde_json",
 ]

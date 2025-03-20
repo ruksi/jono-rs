@@ -45,6 +45,7 @@ impl Producer {
             )
             .hset(&metadata_key, "created_at", now.to_string())
             .hset(&metadata_key, "attempt_history", "[]")
+            .hset(&metadata_key, "outcome", "null")
             .query(&mut conn)
             .map_err(JonoError::Redis)?;
 
@@ -78,7 +79,7 @@ impl Producer {
         let mut conn = self.get_connection()?;
         let now = current_timestamp_ms();
         let keys = self.context.keys();
-        let metadata_key = keys.job_metadata_hash(&job_id);
+        let metadata_key = keys.job_metadata_hash(job_id);
 
         let exists: bool = conn.exists(metadata_key).map_err(JonoError::Redis)?;
         if !exists {

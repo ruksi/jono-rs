@@ -1,0 +1,13 @@
+[package]
+name = "jono_consume"
+description = "Worker interface to process Jono jobs"
+edition.workspace = true
+license.workspace = true
+repository.workspace = true
+version.workspace = true
+
+[dependencies]
+jono_core = { path = "../jono_core" }
+redis.workspace = true
+serde.workspace = true
+serde_json.workspace = true

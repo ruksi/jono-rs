@@ -4,6 +4,7 @@ members = [
     "jono",
     "jono_core",
     "jono_produce",
+    "jono_consume",
 ]
 
 [workspace.package]
