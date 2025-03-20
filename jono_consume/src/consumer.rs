@@ -44,7 +44,7 @@ impl Consumer {
             return Ok(Outcome::Failure("Job no longer exists".to_string()));
         }
         if inspector.job_is_canceled(&metadata.id)? {
-            return Ok(Outcome::Failure("Job was cancelled".to_string()));
+            return Ok(Outcome::Failure("Job was canceled".to_string()));
         }
 
         let outcome = self.handler.handle_job(workload);
@@ -85,16 +85,15 @@ impl Consumer {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
-        let outcome_data = outcome.unwrap_or(json!(null));
-        let outcome_json =
-            serde_json::to_string(&outcome_data).map_err(JonoError::Serialization)?;
+        let out_data = outcome.unwrap_or(json!(null));
+        let out_json = serde_json::to_string(&out_data).map_err(JonoError::Serialization)?;
         let metadata_key = keys.job_metadata_hash(job_id);
 
         let now = current_timestamp_ms();
         let _: () = redis::pipe()
             .zrem(keys.running_set(), job_id)
             .hset(&metadata_key, "completed_at", now.to_string())
-            .hset(&metadata_key, "outcome", outcome_json)
+            .hset(&metadata_key, "outcome", out_json)
             .query(&mut conn)
             .map_err(JonoError::Redis)?;
 

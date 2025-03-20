@@ -32,7 +32,7 @@ impl Inspector {
         let keys = self.context.keys();
 
         let score: Option<i64> = conn
-            .zscore(keys.cancelled_set(), job_id)
+            .zscore(keys.canceled_set(), job_id)
             .map_err(JonoError::Redis)?;
 
         Ok(score.is_some())
@@ -74,7 +74,7 @@ impl Inspector {
         }
 
         let in_canceled_set: bool = conn
-            .zscore::<_, _, Option<i64>>(keys.cancelled_set(), job_id)
+            .zscore::<_, _, Option<i64>>(keys.canceled_set(), job_id)
             .map_err(JonoError::Redis)?
             .is_some();
         if in_canceled_set {

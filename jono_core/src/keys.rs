@@ -25,8 +25,8 @@ impl JonoKeys {
     }
 
     /// Redis key for the sorted set that communicates which jobs have been canceled
-    pub fn cancelled_set(&self) -> String {
-        format!("{}:{}:cancelled", self.prefix, self.topic)
+    pub fn canceled_set(&self) -> String {
+        format!("{}:{}:canceled", self.prefix, self.topic)
     }
 
     /// Redis key for the sorted set that holds the jobs scheduled to run later

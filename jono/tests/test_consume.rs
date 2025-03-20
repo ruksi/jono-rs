@@ -5,21 +5,22 @@ use jono_core::get_redis_url;
 use serde_json::json;
 use std::sync::Arc;
 
-#[test]
-fn test_() -> JonoResult<()> {
-    struct MockHandler;
-    impl Worker for MockHandler {
-        fn handle_job(&self, _workload: Workload) -> JonoResult<Outcome> {
-            Ok(Outcome::Success(Some(json!({"processed": true}))))
-        }
-    }
+struct NoopWorker;
 
+impl Worker for NoopWorker {
+    fn handle_job(&self, _workload: Workload) -> JonoResult<Outcome> {
+        Ok(Outcome::Success(Some(json!({"processed": true}))))
+    }
+}
+
+#[test]
+fn test_nonexistent_job() -> JonoResult<()> {
     let context = create_test_context("test_consume");
-    let consumer = Consumer::with_context(context.clone(), Arc::new(MockHandler));
+    let consumer = Consumer::with_context(context, Arc::new(NoopWorker));
 
     assert!(consumer.acquire_next_job().is_ok_and(|v| v.is_none()));
 
-    let job_metadata = JobMetadata {
+    let imaginary_metadata = JobMetadata {
         id: "121212121212".to_string(),
         payload: json!({"action": "test_action"}),
         max_attempts: 0,
@@ -28,7 +29,7 @@ fn test_() -> JonoResult<()> {
         attempt_history: vec![],
         outcome: None,
     };
-    assert!(consumer.process_job(job_metadata).is_ok_and(|out| {
+    assert!(consumer.process_job(imaginary_metadata).is_ok_and(|out| {
         matches!(out, Outcome::Failure(msg) if msg == "Job no longer exists")
     }));
 
@@ -36,18 +37,11 @@ fn test_() -> JonoResult<()> {
 }
 
 #[test]
-fn test_normal() -> JonoResult<()> {
-    struct MockHandler;
-    impl Worker for MockHandler {
-        fn handle_job(&self, _workload: Workload) -> JonoResult<Outcome> {
-            Ok(Outcome::Success(Some(json!({"processed": true}))))
-        }
-    }
-
+fn test_basics() -> JonoResult<()> {
     let context = create_test_context("test_consume");
     let inspector = Inspector::with_context(context.clone());
     let producer = Producer::with_context(context.clone());
-    let consumer = Consumer::with_context(context.clone(), Arc::new(MockHandler));
+    let consumer = Consumer::with_context(context.clone(), Arc::new(NoopWorker));
 
     let job_id = producer.dispatch_job(JobPlan::new(json!({"action": "test_action"}))?)?;
     assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
@@ -59,10 +53,9 @@ fn test_normal() -> JonoResult<()> {
     let Outcome::Success(_) = outcome else {
         panic!("Expected job to succeed but got {:?}", outcome);
     };
-
-    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Completed);
     let metadata = inspector.get_job_metadata(&job_id)?;
     assert_eq!(metadata.outcome.unwrap(), json!({"processed": true}));
+    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Completed);
 
     producer.clean_job(&job_id)?;
     Ok(())
