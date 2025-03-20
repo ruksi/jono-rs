@@ -1,5 +1,5 @@
 use crate::{Outcome, Worker, Workload};
-use jono_core::{current_timestamp_ms, Inspector, JobMetadata, JonoContext, JonoError, JonoResult};
+use jono_core::{Inspector, JobMetadata, JonoContext, JonoError, JonoResult, current_timestamp_ms};
 use redis::{Commands, Connection};
 use serde_json::json;
 use std::sync::Arc;
