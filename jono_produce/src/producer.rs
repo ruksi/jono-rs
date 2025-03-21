@@ -9,14 +9,8 @@ pub struct Producer {
 }
 
 impl Producer {
-    /// Create a new Producer with the given topic context
     pub fn with_context(context: Context) -> Self {
         Self { context }
-    }
-
-    /// Get a Redis connection
-    fn get_connection(&self) -> Result<Connection> {
-        self.context.get_connection()
     }
 
     /// Send a new job to the queue
@@ -120,7 +114,6 @@ impl Producer {
         Ok(false)
     }
 
-    /// Clean up job data from Redis
     pub fn clean_job(&self, job_id: &str) -> Result<bool> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
@@ -136,5 +129,9 @@ impl Producer {
             .map_err(Error::Redis)?;
 
         Ok(metadata_deleted > 0)
+    }
+
+    fn get_connection(&self) -> Result<Connection> {
+        self.context.get_connection()
     }
 }

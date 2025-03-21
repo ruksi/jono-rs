@@ -3,10 +3,10 @@
 //! This crate allows users to submit jobs to the queue, cancel jobs, and set job priorities.
 
 mod job_plan;
-mod worker;
+mod producer;
 
 pub use job_plan::JobPlan;
-pub use worker::Producer;
+pub use producer::Producer;
 
 pub mod prelude {
     pub use crate::{JobPlan, Producer};
