@@ -35,19 +35,19 @@ impl<W: Worker> Consumer<W> {
                     consecutive_errors = 0;
                 }
                 Ok(None) => {
-                    thread::sleep(self.config.polling_interval);
+                    thread::sleep(self.config.get_polling_interval());
                 }
                 Err(e) => {
                     consecutive_errors += 1;
                     eprintln!("Error processing job: {}", e);
 
-                    if consecutive_errors >= self.config.max_consecutive_errors {
+                    if consecutive_errors >= self.config.get_max_consecutive_errors() {
                         return Err(Error::InvalidJob(format!(
                             "Too many consecutive errors ({})",
                             consecutive_errors
                         )));
                     }
-                    thread::sleep(self.config.polling_interval);
+                    thread::sleep(self.config.get_polling_interval());
                 }
             }
         }
@@ -85,7 +85,7 @@ impl<W: Worker> Consumer<W> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
-        let expiry = now + self.config.heartbeat_timeout.as_millis() as i64;
+        let expiry = now + self.config.get_heartbeat_timeout().as_millis() as i64;
         let metadata_key = keys.job_metadata_hash(job_id);
 
         let _: () = redis::pipe()

@@ -52,12 +52,11 @@ fn test_with_config() -> Result<()> {
     let context = create_test_context("test_config");
     let producer = Producer::with_context(context.clone());
 
-    let consumer =
-        Consumer::with_context(context.clone(), NoopWorker).with_config(ConsumerConfig {
-            polling_interval: Duration::from_millis(50),
-            heartbeat_interval: Duration::from_secs(2),
-            ..Default::default()
-        });
+    let consumer = Consumer::with_context(context.clone(), NoopWorker).with_config(
+        ConsumerConfig::new()
+            .polling_interval(Duration::from_millis(50))
+            .heartbeat_interval(Duration::from_secs(2)),
+    );
 
     let job_id = JobPlan::new()
         .payload(json!({"action": "configured_action"}))

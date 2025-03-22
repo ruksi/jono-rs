@@ -4,13 +4,16 @@ use std::time::Duration;
 #[derive(Debug, Clone)]
 pub struct ConsumerConfig {
     /// How long to wait between polling for new jobs
-    pub polling_interval: Duration,
+    polling_interval: Duration,
+
     /// How often to update the heartbeat
-    pub heartbeat_interval: Duration,
+    heartbeat_interval: Duration,
+
     /// How long before a job is considered abandoned
-    pub heartbeat_timeout: Duration,
+    heartbeat_timeout: Duration,
+
     /// Maximum number of consecutive errors before stopping
-    pub max_consecutive_errors: usize,
+    max_consecutive_errors: usize,
 }
 
 impl Default for ConsumerConfig {
@@ -21,5 +24,43 @@ impl Default for ConsumerConfig {
             heartbeat_timeout: Duration::from_secs(10),
             max_consecutive_errors: 3,
         }
+    }
+}
+
+impl ConsumerConfig {
+    pub fn new() -> ConsumerConfig {
+        ConsumerConfig::default()
+    }
+
+    pub fn polling_interval(mut self, polling_interval: Duration) -> ConsumerConfig {
+        self.polling_interval = polling_interval;
+        self
+    }
+    pub fn get_polling_interval(&self) -> Duration {
+        self.polling_interval
+    }
+
+    pub fn heartbeat_interval(mut self, heartbeat_interval: Duration) -> ConsumerConfig {
+        self.heartbeat_interval = heartbeat_interval;
+        self
+    }
+    pub fn get_heartbeat_interval(&self) -> Duration {
+        self.heartbeat_interval
+    }
+
+    pub fn heartbeat_timeout(mut self, heartbeat_timeout: Duration) -> ConsumerConfig {
+        self.heartbeat_timeout = heartbeat_timeout;
+        self
+    }
+    pub fn get_heartbeat_timeout(&self) -> Duration {
+        self.heartbeat_timeout
+    }
+
+    pub fn max_consecutive_errors(mut self, max_consecutive_errors: usize) -> ConsumerConfig {
+        self.max_consecutive_errors = max_consecutive_errors;
+        self
+    }
+    pub fn get_max_consecutive_errors(&self) -> usize {
+        self.max_consecutive_errors
     }
 }
