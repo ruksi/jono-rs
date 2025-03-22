@@ -13,25 +13,16 @@ impl Worker for NoopWorker {
 }
 
 #[test]
-fn test_nonexistent_job() -> Result<()> {
-    let context = create_test_context("test_consume");
-    let consumer = Consumer::with_context(context, NoopWorker);
-    assert!(consumer.run_next().is_ok_and(|v| v.is_none()));
-    Ok(())
-}
-
-#[test]
 fn test_basics() -> Result<()> {
     let context = create_test_context("test_consume");
     let inspector = Inspector::with_context(context.clone());
     let producer = Producer::with_context(context.clone());
-    let consumer = Consumer::with_context(context.clone(), NoopWorker);
-
     let job_id = JobPlan::new()
         .payload(json!({"action": "test_action"}))
         .dispatch(&producer)?;
     assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
 
+    let consumer = Consumer::with_context(context.clone(), NoopWorker);
     let outcome = consumer.run_next()?.unwrap();
     let Outcome::Success(_) = outcome else {
         panic!("Expected job to succeed but got {:?}", outcome);
@@ -51,6 +42,9 @@ fn test_with_config() -> Result<()> {
 
     let context = create_test_context("test_config");
     let producer = Producer::with_context(context.clone());
+    let job_id = JobPlan::new()
+        .payload(json!({"action": "configured_action"}))
+        .dispatch(&producer)?;
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker).with_config(
         ConsumerConfig::new()
@@ -58,16 +52,20 @@ fn test_with_config() -> Result<()> {
             .heartbeat_interval(Duration::from_secs(2)),
     );
 
-    let job_id = JobPlan::new()
-        .payload(json!({"action": "configured_action"}))
-        .dispatch(&producer)?;
-
     let outcome = consumer.run_next()?.unwrap();
     let Outcome::Success(_) = outcome else {
         panic!("Expected job to succeed");
     };
 
     producer.clean_job(&job_id)?;
+    Ok(())
+}
+
+#[test]
+fn test_nonexistent_job() -> Result<()> {
+    let context = create_test_context("test_consume");
+    let consumer = Consumer::with_context(context, NoopWorker);
+    assert!(consumer.run_next().is_ok_and(|v| v.is_none()));
     Ok(())
 }
 
