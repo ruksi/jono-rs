@@ -18,24 +18,26 @@ impl Producer {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
-        let metadata_key = keys.job_metadata_hash(&job_plan.id);
+
+        let job_id = generate_job_id();
+        let metadata_key = keys.job_metadata_hash(&job_id);
 
         let _: () = redis::pipe()
-            .hset(&metadata_key, "id", &job_plan.id)
+            .hset(&metadata_key, "id", &job_id)
             .hset(
                 &metadata_key,
                 "payload",
-                serde_json::to_string(&job_plan.payload)?,
+                serde_json::to_string(&job_plan.get_payload())?,
             )
             .hset(
                 &metadata_key,
                 "max_attempts",
-                job_plan.max_attempts.to_string(),
+                job_plan.get_max_attempts().to_string(),
             )
             .hset(
                 &metadata_key,
                 "initial_priority",
-                job_plan.priority.to_string(),
+                job_plan.get_priority().to_string(),
             )
             .hset(&metadata_key, "created_at", now.to_string())
             .hset(&metadata_key, "attempt_history", "[]")
@@ -43,29 +45,30 @@ impl Producer {
             .query(&mut conn)
             .map_err(Error::Redis)?;
 
-        if job_plan.scheduled_for > 0 && job_plan.scheduled_for > now {
+        let scheduled_for = job_plan.get_scheduled_for();
+        if scheduled_for > 0 && scheduled_for > now {
             let _: () = conn
-                .zadd::<_, _, _, ()>(keys.scheduled_set(), &job_plan.id, job_plan.scheduled_for)
+                .zadd::<_, _, _, ()>(keys.scheduled_set(), &job_id, scheduled_for)
                 .map_err(Error::Redis)?;
 
             info!(
-                job_id = %job_plan.id,
-                scheduled_for = %job_plan.scheduled_for,
+                job_id = %job_id,
+                scheduled_for = %job_plan.get_scheduled_for(),
                 "Job scheduled for later execution"
             );
         } else {
             let _: () = conn
-                .zadd::<_, _, _, ()>(keys.queued_set(), &job_plan.id, job_plan.priority)
+                .zadd::<_, _, _, ()>(keys.queued_set(), &job_id, job_plan.get_priority())
                 .map_err(Error::Redis)?;
 
             info!(
-                job_id = %job_plan.id,
-                priority = %job_plan.priority,
+                job_id = %job_id,
+                priority = %job_plan.get_priority(),
                 "Job dispatched to queue"
             );
         }
 
-        Ok(job_plan.id)
+        Ok(job_id)
     }
 
     /// Cancel a job if it hasn't started processing yet

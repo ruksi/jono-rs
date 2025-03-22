@@ -10,14 +10,12 @@ fn test_dispatch_job() -> Result<()> {
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
 
-    let payload = json!({"action": "test_action", "one": 1, "two": 2, "three": 3});
-    let plan = JobPlan::new(&payload)?;
-    let job_id = plan.id.clone();
-    producer.clean_job(&job_id)?;
-    let job_id = producer.dispatch_job(plan)?;
+    let job_id = JobPlan::new()
+        .payload(json!({"one": 1, "two": 2}))
+        .dispatch(&producer)?;
 
     let metadata = inspector.get_job_metadata(&job_id)?;
-    assert_eq!(metadata.payload, payload);
+    assert_eq!(metadata.payload, json!({"one": 1, "two": 2}));
     assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
 
     producer.clean_job(&job_id)?;
@@ -32,10 +30,10 @@ fn test_dispatch_scheduled_job() -> Result<()> {
 
     let payload = json!({ "action": "run this later!" });
     let future_time = current_timestamp_ms() + 10000;
-    let plan = JobPlan::new(payload)?.schedule_for(future_time);
-    let job_id = plan.id.clone();
-    producer.clean_job(&job_id)?;
-    let job_id = producer.dispatch_job(plan)?;
+    let job_id = JobPlan::new()
+        .payload(payload)
+        .scheduled_for(future_time)
+        .dispatch(&producer)?;
 
     assert!(inspector.job_exists(&job_id)?);
     inspector.get_job_metadata(&job_id)?;
@@ -52,11 +50,9 @@ fn test_cancel_job() -> Result<()> {
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
 
-    let payload = json!({ "action": "cancel this soon!" });
-    let plan = JobPlan::new(payload)?;
-    let job_id = plan.id.clone();
-    producer.clean_job(&job_id)?;
-    let job_id = producer.dispatch_job(plan)?;
+    let job_id = JobPlan::new()
+        .payload(json!({ "action": "cancel this soon!" }))
+        .dispatch(&producer)?;
 
     assert!(producer.cancel_job(&job_id, 0).is_ok());
 
@@ -74,11 +70,9 @@ fn test_clean_job() -> Result<()> {
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
 
-    let payload = json!({ "action": "clean this soon!" });
-    let plan = JobPlan::new(payload)?;
-    let job_id = plan.id.clone();
-    producer.clean_job(&job_id)?;
-    let job_id = producer.dispatch_job(plan)?;
+    let job_id = JobPlan::new()
+        .payload(json!({ "action": "clean this soon!" }))
+        .dispatch(&producer)?;
 
     // before clean
     assert!(inspector.job_exists(&job_id)?);

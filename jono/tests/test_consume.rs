@@ -43,7 +43,9 @@ fn test_basics() -> Result<()> {
     let producer = Producer::with_context(context.clone());
     let consumer = Consumer::with_context(context.clone(), Arc::new(NoopWorker));
 
-    let job_id = producer.dispatch_job(JobPlan::new(json!({"action": "test_action"}))?)?;
+    let job_id = JobPlan::new()
+        .payload(json!({"action": "test_action"}))
+        .dispatch(&producer)?;
     assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
 
     let metadata = consumer.acquire_next_job()?.unwrap();
