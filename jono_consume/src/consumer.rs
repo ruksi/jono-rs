@@ -1,21 +1,69 @@
+use crate::consumer_config::ConsumerConfig;
 use crate::{Outcome, Worker, Workload};
-use jono_core::{Context, Error, Inspector, JobMetadata, Result, current_timestamp_ms};
+use jono_core::{Context, Error, Inspector, Result, current_timestamp_ms};
 use redis::{Commands, Connection};
 use serde_json::json;
-use std::sync::Arc;
+use std::thread;
 
 /// Interface for getting, processing and resolving jobs from Jono queues.
-pub struct Consumer {
+pub struct Consumer<W: Worker> {
     context: Context,
-    handler: Arc<dyn Worker>,
+    config: ConsumerConfig,
+    worker: W,
 }
 
-impl Consumer {
-    pub fn with_context(context: Context, handler: Arc<dyn Worker>) -> Self {
-        Self { context, handler }
+impl<W: Worker> Consumer<W> {
+    pub fn with_context(context: Context, worker: W) -> Self {
+        Self {
+            context,
+            config: ConsumerConfig::default(),
+            worker,
+        }
     }
 
-    pub fn acquire_next_job(&self) -> Result<Option<JobMetadata>> {
+    pub fn with_config(mut self, config: ConsumerConfig) -> Self {
+        self.config = config;
+        self
+    }
+
+    pub fn run(&self) -> Result<()> {
+        let mut consecutive_errors = 0;
+
+        loop {
+            match self.run_next() {
+                Ok(Some(_)) => {
+                    consecutive_errors = 0;
+                }
+                Ok(None) => {
+                    thread::sleep(self.config.polling_interval);
+                }
+                Err(e) => {
+                    consecutive_errors += 1;
+                    eprintln!("Error processing job: {}", e);
+
+                    if consecutive_errors >= self.config.max_consecutive_errors {
+                        return Err(Error::InvalidJob(format!(
+                            "Too many consecutive errors ({})",
+                            consecutive_errors
+                        )));
+                    }
+                    thread::sleep(self.config.polling_interval);
+                }
+            }
+        }
+    }
+
+    pub fn run_next(&self) -> Result<Option<Outcome>> {
+        match self.acquire_next_job()? {
+            Some(metadata) => {
+                let outcome = self.process_job(metadata)?;
+                Ok(Some(outcome))
+            }
+            None => Ok(None),
+        }
+    }
+
+    fn acquire_next_job(&self) -> Result<Option<Workload>> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
@@ -25,49 +73,19 @@ impl Consumer {
         if let Some((job_id, _)) = entries.first() {
             let inspector = Inspector::with_context(self.context.clone());
             let metadata = inspector.get_job_metadata(job_id)?;
-            self.start_job(job_id)?;
-            Ok(Some(metadata))
+            let workload = Workload::from_metadata(metadata);
+            self.mark_job_running(job_id)?;
+            Ok(Some(workload))
         } else {
             Ok(None)
         }
     }
 
-    pub fn process_job(&self, metadata: JobMetadata) -> Result<Outcome> {
-        let workload = Workload {
-            metadata: metadata.clone(),
-            context: self.context.clone(),
-        };
-
-        let inspector = Inspector::with_context(self.context.clone());
-        if !inspector.job_exists(&metadata.id)? {
-            return Ok(Outcome::Failure("Job no longer exists".to_string()));
-        }
-        if inspector.job_is_canceled(&metadata.id)? {
-            return Ok(Outcome::Failure("Job was canceled".to_string()));
-        }
-
-        let outcome = self.handler.handle_job(workload);
-        match &outcome {
-            Ok(Outcome::Success(outcome_data)) => {
-                self.complete_job(&metadata.id, outcome_data.clone())?;
-            }
-            Ok(Outcome::Failure(_error_message)) => {
-                todo!();
-            }
-            Err(e) => {
-                let _error_message = format!("Error processing job: {}", e);
-                todo!();
-            }
-        }
-
-        outcome
-    }
-
-    fn start_job(&self, job_id: &str) -> Result<()> {
+    fn mark_job_running(&self, job_id: &str) -> Result<()> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
-        let expiry = now + self.handler.heartbeat_expiry().as_millis() as i64;
+        let expiry = now + self.config.heartbeat_timeout.as_millis() as i64;
         let metadata_key = keys.job_metadata_hash(job_id);
 
         let _: () = redis::pipe()
@@ -78,6 +96,30 @@ impl Consumer {
             .map_err(Error::Redis)?;
 
         Ok(())
+    }
+
+    fn process_job(&self, workload: Workload) -> Result<Outcome> {
+        let inspector = Inspector::with_context(self.context.clone());
+        if !inspector.job_exists(&workload.job_id)? {
+            return Ok(Outcome::Failure("Job no longer exists".to_string()));
+        }
+        if inspector.job_is_canceled(&workload.job_id)? {
+            return Ok(Outcome::Failure("Job was canceled".to_string()));
+        }
+
+        let outcome = self.worker.process(&workload)?;
+
+        match &outcome {
+            Outcome::Success(outcome_data) => {
+                self.complete_job(&workload.job_id, outcome_data.clone())?;
+            }
+            Outcome::Failure(error_message) => {
+                eprintln!("Job {} failed: {}", workload.job_id, error_message);
+                todo!();
+            }
+        }
+
+        Ok(outcome)
     }
 
     fn complete_job(&self, job_id: &str, outcome: Option<serde_json::Value>) -> Result<()> {
@@ -91,6 +133,7 @@ impl Consumer {
         let now = current_timestamp_ms();
         let _: () = redis::pipe()
             .zrem(keys.running_set(), job_id)
+            .hset(&metadata_key, "status", "completed")
             .hset(&metadata_key, "completed_at", now.to_string())
             .hset(&metadata_key, "outcome", out_json)
             .query(&mut conn)

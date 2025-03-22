@@ -3,12 +3,11 @@
 use jono::prelude::*;
 use jono_core::get_redis_url;
 use serde_json::json;
-use std::sync::Arc;
 
 struct NoopWorker;
 
 impl Worker for NoopWorker {
-    fn handle_job(&self, _workload: Workload) -> Result<Outcome> {
+    fn process(&self, _: &Workload) -> Result<Outcome> {
         Ok(Outcome::Success(Some(json!({"processed": true}))))
     }
 }
@@ -16,23 +15,8 @@ impl Worker for NoopWorker {
 #[test]
 fn test_nonexistent_job() -> Result<()> {
     let context = create_test_context("test_consume");
-    let consumer = Consumer::with_context(context, Arc::new(NoopWorker));
-
-    assert!(consumer.acquire_next_job().is_ok_and(|v| v.is_none()));
-
-    let imaginary_metadata = JobMetadata {
-        id: "121212121212".to_string(),
-        payload: json!({"action": "test_action"}),
-        max_attempts: 0,
-        initial_priority: 0,
-        attempt_count: 0,
-        attempt_history: vec![],
-        outcome: None,
-    };
-    assert!(consumer.process_job(imaginary_metadata).is_ok_and(|out| {
-        matches!(out, Outcome::Failure(msg) if msg == "Job no longer exists")
-    }));
-
+    let consumer = Consumer::with_context(context, NoopWorker);
+    assert!(consumer.run_next().is_ok_and(|v| v.is_none()));
     Ok(())
 }
 
@@ -41,23 +25,48 @@ fn test_basics() -> Result<()> {
     let context = create_test_context("test_consume");
     let inspector = Inspector::with_context(context.clone());
     let producer = Producer::with_context(context.clone());
-    let consumer = Consumer::with_context(context.clone(), Arc::new(NoopWorker));
+    let consumer = Consumer::with_context(context.clone(), NoopWorker);
 
     let job_id = JobPlan::new()
         .payload(json!({"action": "test_action"}))
         .dispatch(&producer)?;
     assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
 
-    let metadata = consumer.acquire_next_job()?.unwrap();
-    assert_eq!(inspector.get_job_status(&metadata.id)?, JobStatus::Running);
-
-    let outcome = consumer.process_job(metadata)?;
+    let outcome = consumer.run_next()?.unwrap();
     let Outcome::Success(_) = outcome else {
         panic!("Expected job to succeed but got {:?}", outcome);
     };
+
     let metadata = inspector.get_job_metadata(&job_id)?;
     assert_eq!(metadata.outcome.unwrap(), json!({"processed": true}));
     assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Completed);
+
+    producer.clean_job(&job_id)?;
+    Ok(())
+}
+
+#[test]
+fn test_with_config() -> Result<()> {
+    use std::time::Duration;
+
+    let context = create_test_context("test_config");
+    let producer = Producer::with_context(context.clone());
+
+    let consumer =
+        Consumer::with_context(context.clone(), NoopWorker).with_config(ConsumerConfig {
+            polling_interval: Duration::from_millis(50),
+            heartbeat_interval: Duration::from_secs(2),
+            ..Default::default()
+        });
+
+    let job_id = JobPlan::new()
+        .payload(json!({"action": "configured_action"}))
+        .dispatch(&producer)?;
+
+    let outcome = consumer.run_next()?.unwrap();
+    let Outcome::Success(_) = outcome else {
+        panic!("Expected job to succeed");
+    };
 
     producer.clean_job(&job_id)?;
     Ok(())

@@ -37,8 +37,7 @@ fn test_dispatch_scheduled_job() -> Result<()> {
 
     assert!(inspector.job_exists(&job_id)?);
     inspector.get_job_metadata(&job_id)?;
-    let status = inspector.get_job_status(&job_id)?;
-    assert_eq!(status, JobStatus::Scheduled);
+    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Scheduled);
 
     producer.clean_job(&job_id)?;
     Ok(())

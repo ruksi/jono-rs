@@ -1,22 +1,26 @@
-use jono_core::{Context, JobMetadata, Result};
+use jono_core::{JobMetadata, Result};
 use serde_json::Value;
-use std::time::Duration;
 
-#[derive(Debug)]
-pub enum Outcome {
-    Success(Option<Value>),
-    Failure(String),
+pub trait Worker: Send + Sync {
+    fn process(&self, job: &Workload) -> Result<Outcome>;
 }
 
 pub struct Workload {
-    pub context: Context,
-    pub metadata: JobMetadata,
+    pub job_id: String,
+    pub payload: Value,
 }
 
-pub trait Worker: Send + Sync {
-    fn handle_job(&self, workload: Workload) -> Result<Outcome>;
-
-    fn heartbeat_expiry(&self) -> Duration {
-        Duration::from_secs(10)
+impl Workload {
+    pub fn from_metadata(metadata: JobMetadata) -> Self {
+        Self {
+            job_id: metadata.id,
+            payload: metadata.payload,
+        }
     }
+}
+
+#[derive(Debug, Clone)]
+pub enum Outcome {
+    Success(Option<Value>),
+    Failure(String),
 }
