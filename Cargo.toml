@@ -10,6 +10,7 @@ members = [
 [workspace.package]
 edition = "2024"
 license = "MIT"
+authors = ["Ruksi Korpisara <me@ruk.si>"]
 repository = "https://github.com/ruksi/jono-rs"
 version = "0.1.0"
 
