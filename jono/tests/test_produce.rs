@@ -1,8 +1,11 @@
 #![cfg(all(feature = "produce"))]
 
+mod common;
+
 use jono::prelude::*;
-use jono_core::{current_timestamp_ms, generate_job_id, get_redis_url};
+use jono_core::{current_timestamp_ms, generate_job_id};
 use serde_json::json;
+use common::create_test_context;
 
 #[test]
 fn test_dispatch_job() -> Result<()> {
@@ -106,8 +109,3 @@ fn test_job_not_found_for_cancel() {
     ));
 }
 
-fn create_test_context(topic: &str) -> Context {
-    let redis_url = get_redis_url();
-    let forum = Forum::new(&redis_url).expect("Failed to connect to Redis");
-    forum.topic(topic)
-}

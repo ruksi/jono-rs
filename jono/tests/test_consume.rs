@@ -1,7 +1,9 @@
 #![cfg(all(feature = "produce", feature = "consume"))]
 
+mod common;
+
+use common::create_test_context;
 use jono::prelude::*;
-use jono_core::get_redis_url;
 use serde_json::json;
 
 struct NoopWorker;
@@ -67,10 +69,4 @@ fn test_nonexistent_job() -> Result<()> {
     let consumer = Consumer::with_context(context, NoopWorker);
     assert!(consumer.run_next().is_ok_and(|v| v.is_none()));
     Ok(())
-}
-
-fn create_test_context(topic: &str) -> Context {
-    let redis_url = get_redis_url();
-    let forum = Forum::new(&redis_url).expect("Failed to connect to Redis");
-    forum.topic(topic)
 }
