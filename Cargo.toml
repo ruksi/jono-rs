@@ -12,7 +12,13 @@ edition = "2024"
 license = "MIT"
 authors = ["Ruksi Korpisara <me@ruk.si>"]
 repository = "https://github.com/ruksi/jono-rs"
-version = "0.1.0"
+version = "0.1.4"
+
+[workspace.metadata.release]
+shared-version = true
+pre-release-commit-message = "🔖 Become {{version}}"
+tag-name = "v{{version}}"
+tag-message = ""
 
 [workspace.dependencies]
 redis = { version = "0.29" }
