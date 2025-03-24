@@ -13,9 +13,9 @@ produce = ["dep:jono_produce"]
 consume = ["dep:jono_consume"]
 
 [dependencies]
-jono_core = { path = "../jono_core", version = "0.1.4" }
-jono_produce = { path = "../jono_produce", version = "0.1.4", default-features = false, optional = true }
-jono_consume = { path = "../jono_consume", version = "0.1.4", default-features = false, optional = true }
+jono_core = { path = "../jono_core", version = "0.1.5" }
+jono_produce = { path = "../jono_produce", version = "0.1.5", default-features = false, optional = true }
+jono_consume = { path = "../jono_consume", version = "0.1.5", default-features = false, optional = true }
 
 [dev-dependencies]
 serde.workspace = true
