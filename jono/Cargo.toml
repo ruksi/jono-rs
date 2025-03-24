@@ -1,6 +1,6 @@
 [package]
 name = "jono"
-description = "Priority Job Queue on Redis"
+description = "Priority Queue on Redis"
 readme = "../README.md"
 authors.workspace = true
 edition.workspace = true

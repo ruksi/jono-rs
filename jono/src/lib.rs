@@ -1,4 +1,4 @@
-//! Jono is a priority job queue implemented with ULIDs and Redis sorted sets.
+//! Jono is a priority queue implemented with ULIDs and Redis sorted sets.
 //!
 //! This is an _umbrella crate_ for re-exporting different components of
 //! the priority job queue system from a single place according to the
