@@ -1,23 +1,10 @@
 # Jono
 
-Jono is a priority job queue with ULIDs and Redis sorted sets.
+Jono is a priority job queue based on Redis sorted sets and ULIDs.
 
-+ ULIDs are used because they are lexicographically sortable.
-+ Redis sorted sets are used because they foremost allow priority ordering through their score and
-  secondly because after that the entities are lexicographically sorted.
-
-## Development
-
-```
-docker compose up -d
-docker compose ps
-
-# tests should pass
-cargo test
-
-# check that the documentation looks proper
-cargo doc --no-deps --open
-
-# if/when you are done
-docker compose down -v
-```
++ Redis sorted sets are used because:
+    + sorted sets allow priority ordering through member score
+    + equally scored members are lexicographically ordered
++ ULIDs are generated lexicographically ordered by definition so
+  they can be used as member values in Redis sorted sets for
+  FIFO ordering
