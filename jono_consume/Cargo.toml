@@ -1,6 +1,6 @@
 [package]
 name = "jono_consume"
-description = "Worker interface to process Jono jobs"
+description = "Worker interface for processing jobs on Jono queues"
 readme = "README.md"
 authors.workspace = true
 edition.workspace = true
@@ -9,7 +9,7 @@ repository.workspace = true
 version.workspace = true
 
 [dependencies]
-jono_core = { path = "../jono_core", version = "0.1.6-rc.3" }
+jono_core = { path = "../jono_core", version = "=0.1.6-rc.3" }
 redis.workspace = true
 serde.workspace = true
 serde_json.workspace = true
