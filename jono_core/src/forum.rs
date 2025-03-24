@@ -15,7 +15,7 @@ impl Forum {
 
     /// Create a forum with the default Redis URL from environment
     pub fn default() -> Result<Self> {
-        let redis_url = crate::util::get_redis_url();
+        let redis_url = crate::util::get_redis_url("redis://localhost:6379");
         Self::new(&redis_url)
     }
 

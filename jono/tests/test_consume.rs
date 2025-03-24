@@ -25,8 +25,8 @@ fn test_basics() -> Result<()> {
     assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
-    let outcome = consumer.run_next()?.unwrap();
-    let Outcome::Success(_) = outcome else {
+    let outcome = consumer.run_next()?;
+    let Some(Outcome::Success(_)) = outcome else {
         panic!("Expected job to succeed but got {:?}", outcome);
     };
 

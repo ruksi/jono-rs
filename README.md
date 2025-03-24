@@ -21,8 +21,9 @@ use serde_json::json;
 
 pub fn main() -> Result<()> {
     // creating the context, should be done on both producer and consumer code
-    let redis_url = get_redis_url(); // "JONO_REDIS_URL" > "REDIS_URL", or give custom
-    let forum = Forum::new(&redis_url).expect("Failed to connect to Redis");
+    // checks "JONO_REDIS_URL", then "REDIS_URL" and defaults to given fallback
+    let redis_url = get_redis_url("redis://localhost:6379");
+    let forum = Forum::new(&redis_url)?;
     let context = forum.topic("workwork");
 
     // to submit new jobs:
@@ -33,13 +34,16 @@ pub fn main() -> Result<()> {
 
     // to process jobs (worker code is further below):
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
-    let outcome = consumer.run_next()?.unwrap();
+    let outcome = consumer.run_next()?;
     match outcome {
-        Outcome::Success(_) => {
+        Some(Outcome::Success(_)) => {
             todo!("You want to do something on the worker post-job?");
         }
-        Outcome::Failure(_) => {
+        Some(Outcome::Failure(_)) => {
             todo!("... or specifically on failure?");
+        }
+        None => {
+            todo!("... or do something if nothing was found in the queue?");
         }
     }
 
