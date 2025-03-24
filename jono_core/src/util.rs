@@ -1,9 +1,11 @@
 use std::time::{SystemTime, UNIX_EPOCH};
 use ulid::Ulid;
 
-/// A standardized way to read JONO_REDIS_URL env var
+/// A standardized way to read JONO_REDIS_URL env var with REDIS_URL as fallback
 pub fn get_redis_url() -> String {
-    std::env::var("JONO_REDIS_URL").unwrap_or_else(|_| "redis://localhost:6380".to_string())
+    std::env::var("JONO_REDIS_URL")
+        .or_else(|_| std::env::var("REDIS_URL"))
+        .unwrap_or_else(|_| "redis://localhost:6380".to_string())
 }
 
 /// Generate a new ULID for a job
