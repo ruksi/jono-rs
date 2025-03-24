@@ -1,12 +1,12 @@
 [package]
 name = "jono"
 description = "Priority Job Queue on Redis"
+readme = "../README.md"
 authors.workspace = true
 edition.workspace = true
 license.workspace = true
 repository.workspace = true
 version.workspace = true
-readme = "../README.md"
 
 [features]
 default = ["produce", "consume"]

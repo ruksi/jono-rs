@@ -1,6 +1,6 @@
 # Jono
 
-Jono is a priority job queue based on Redis sorted sets and ULIDs.
+**Jono** is a priority job queue based on Redis sorted sets and ULIDs.
 
 + Redis sorted sets are used because:
     + sorted sets allow priority ordering through member score
