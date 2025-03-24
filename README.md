@@ -1,4 +1,4 @@
-# Jono
+# 🚥 Jono
 
 **Jono** is a priority job queue based on Redis sorted sets and ULIDs.
 
