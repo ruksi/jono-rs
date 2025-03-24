@@ -12,7 +12,7 @@ edition = "2024"
 license = "MIT"
 authors = ["Ruksi Korpisara <me@ruk.si>"]
 repository = "https://github.com/ruksi/jono-rs"
-version = "0.1.6-rc.2"
+version = "0.1.6-rc.3"
 
 [workspace.metadata.release]
 shared-version = true
