@@ -14,28 +14,33 @@ impl Keys {
         }
     }
 
-    /// Redis key for the sorted set that holds queued jobs
+    /// Redis key for the hash that holds job metadata
+    pub fn job_metadata_hash(&self, job_id: &str) -> String {
+        format!("{}:{}:job:{}", self.prefix, self.topic, job_id)
+    }
+
+    /// Redis key for the sorted set that holds queued jobs with priority as scores
     pub fn queued_set(&self) -> String {
         format!("{}:{}:queued", self.prefix, self.topic)
     }
 
-    /// Redis key for the sorted set that holds running jobs
+    /// Redis key for the sorted set that holds running jobs with heartbeat timestamps as scores
     pub fn running_set(&self) -> String {
         format!("{}:{}:running", self.prefix, self.topic)
     }
 
-    /// Redis key for the sorted set that communicates which jobs have been canceled
+    /// Redis key for the sorted set that communicates which jobs have been canceled with grace period timestamps as scores
     pub fn canceled_set(&self) -> String {
         format!("{}:{}:canceled", self.prefix, self.topic)
     }
 
-    /// Redis key for the sorted set that holds the jobs scheduled to run later
+    /// Redis key for the sorted set that holds the scheduled jobs with to-be-executed timestamps as scores
     pub fn scheduled_set(&self) -> String {
         format!("{}:{}:scheduled", self.prefix, self.topic)
     }
 
-    /// Redis key for the hash that holds job metadata
-    pub fn job_metadata_hash(&self, job_id: &str) -> String {
-        format!("{}:{}:job:{}", self.prefix, self.topic, job_id)
+    /// Redis key for the sorted set that holds completed jobs with expiry timestamps as scores
+    pub fn completed_set(&self) -> String {
+        format!("{}:{}:completed", self.prefix, self.topic)
     }
 }

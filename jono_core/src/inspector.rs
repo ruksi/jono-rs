@@ -4,7 +4,7 @@ use redis::{Commands, Connection};
 use serde_json::Value;
 use std::collections::HashMap;
 
-use crate::{Context, Error, JobMetadata, JobStatus, Result};
+use crate::{Context, Error, JobMetadata, JobStatus, Result, current_timestamp_ms};
 
 /// Interface for querying job details
 pub struct Inspector {
@@ -123,6 +123,51 @@ impl Inspector {
 
         let hash: HashMap<String, String> = conn.hgetall(&metadata_key).map_err(Error::Redis)?;
         JobMetadata::from_hash(hash)
+    }
+
+    pub fn get_completed_jobs(&self, limit: usize) -> Result<Vec<JobMetadata>> {
+        self.get_completed_jobs_with_offset(limit, 0)
+    }
+
+    fn get_completed_jobs_with_offset(
+        &self,
+        limit: usize,
+        offset: usize,
+    ) -> Result<Vec<JobMetadata>> {
+        let mut conn = self.get_connection()?;
+        let keys = self.context.keys();
+        let now = current_timestamp_ms();
+
+        let job_ids: Vec<String> = conn
+            .zrangebyscore_limit(
+                keys.completed_set(),
+                now.to_string(),
+                "+inf",
+                offset as isize,
+                limit as isize,
+            )
+            .map_err(Error::Redis)?;
+
+        let mut results = Vec::with_capacity(job_ids.len());
+        for job_id in job_ids {
+            if let Ok(metadata) = self.get_job_metadata(&job_id) {
+                results.push(metadata);
+            }
+        }
+
+        Ok(results)
+    }
+
+    pub fn cleanup_expired_completed_jobs(&self) -> Result<usize> {
+        let mut conn = self.get_connection()?;
+        let keys = self.context.keys();
+        let now = current_timestamp_ms();
+
+        let removed: usize = conn
+            .zrembyscore(keys.completed_set(), "-inf", (now - 1).to_string())
+            .map_err(Error::Redis)?;
+
+        Ok(removed)
     }
 
     fn get_connection(&self) -> Result<Connection> {
