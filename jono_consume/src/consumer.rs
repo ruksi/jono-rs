@@ -1,6 +1,6 @@
 use crate::consumer_config::ConsumerConfig;
 use crate::{Outcome, Worker, Workload};
-use jono_core::{Context, Error, Inspector, Result, current_timestamp_ms};
+use jono_core::{current_timestamp_ms, Context, Error, Inspector, Result};
 use redis::{Commands, Connection};
 use serde_json::json;
 use std::thread;
@@ -131,11 +131,16 @@ impl<W: Worker> Consumer<W> {
         let metadata_key = keys.job_metadata_hash(job_id);
 
         let now = current_timestamp_ms();
+        let ttl_ms = 24 * 60 * 60 * 1000; // 24 hours to collect the outcomes
+        let expiry_time_score = now + ttl_ms;
+
         let _: () = redis::pipe()
             .zrem(keys.running_set(), job_id)
+            .zadd(keys.completed_set(), job_id, expiry_time_score)
             .hset(&metadata_key, "status", "completed")
             .hset(&metadata_key, "completed_at", now.to_string())
             .hset(&metadata_key, "outcome", out_json)
+            .expire(&metadata_key, ttl_ms / 1000)
             .query(&mut conn)
             .map_err(Error::Redis)?;
 
