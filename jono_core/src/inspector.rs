@@ -125,27 +125,12 @@ impl Inspector {
         JobMetadata::from_hash(hash)
     }
 
-    pub fn get_completed_jobs(&self, limit: usize) -> Result<Vec<JobMetadata>> {
-        self.get_completed_jobs_with_offset(limit, 0)
-    }
-
-    fn get_completed_jobs_with_offset(
-        &self,
-        limit: usize,
-        offset: usize,
-    ) -> Result<Vec<JobMetadata>> {
+    pub fn acquire_completed_jobs(&self, limit: usize) -> Result<Vec<JobMetadata>> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
-        let now = current_timestamp_ms();
 
         let job_ids: Vec<String> = conn
-            .zrangebyscore_limit(
-                keys.completed_set(),
-                now.to_string(),
-                "+inf",
-                offset as isize,
-                limit as isize,
-            )
+            .zpopmin(keys.completed_set(), limit as isize)
             .map_err(Error::Redis)?;
 
         let mut results = Vec::with_capacity(job_ids.len());
@@ -158,7 +143,7 @@ impl Inspector {
         Ok(results)
     }
 
-    pub fn cleanup_expired_completed_jobs(&self) -> Result<usize> {
+    pub fn clean_completed_jobs(&self) -> Result<usize> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
