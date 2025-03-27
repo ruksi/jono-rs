@@ -231,6 +231,7 @@ version = "0.1.6-rc.4"
 dependencies = [
  "jono_consume",
  "jono_core",
+ "jono_harvest",
  "jono_produce",
  "serde",
  "serde_json",
@@ -255,6 +256,17 @@ dependencies = [
  "serde_json",
  "thiserror",
  "ulid",
+]
+
+[[package]]
+name = "jono_harvest"
+version = "0.1.6-rc.4"
+dependencies = [
+ "jono_core",
+ "redis",
+ "serde",
+ "serde_json",
+ "tracing",
 ]
 
 [[package]]

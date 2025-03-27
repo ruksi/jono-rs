@@ -18,6 +18,9 @@ pub use jono_produce as produce;
 #[cfg(feature = "consume")]
 pub use jono_consume as consume;
 
+#[cfg(feature = "harvest")]
+pub use jono_harvest as harvest;
+
 pub mod prelude {
     pub use crate::core::prelude::*;
 
@@ -26,4 +29,7 @@ pub mod prelude {
 
     #[cfg(feature = "consume")]
     pub use crate::consume::prelude::*;
+
+    #[cfg(feature = "harvest")]
+    pub use crate::harvest::prelude::*;
 }
