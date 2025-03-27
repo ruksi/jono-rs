@@ -19,8 +19,7 @@ use jono::prelude::*;
 use jono_core::get_redis_url;
 use serde_json::json;
 
-pub fn main() -> Result<()> {
-    // creating the context, should be done on both producer and consumer code
+pub fn code_base_1() -> Result<()> {
     // checks "JONO_REDIS_URL", then "REDIS_URL" and defaults to given fallback
     let redis_url = get_redis_url("redis://localhost:6379");
     let forum = Forum::new(&redis_url)?;
@@ -31,6 +30,12 @@ pub fn main() -> Result<()> {
     let job_id = JobPlan::new()
         .payload(json!({"my-key": "my-value"}))
         .dispatch(&producer)?;
+}
+
+pub fn code_base_2() -> Result<()> {
+    let redis_url = get_redis_url("redis://localhost:6379");
+    let forum = Forum::new(&redis_url)?;
+    let context = forum.topic("workwork");
 
     // to process jobs (worker code is further below):
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
@@ -46,8 +51,16 @@ pub fn main() -> Result<()> {
             todo!("... or do something if nothing was found in the queue?");
         }
     }
+}
 
-    // TODO: add `jono_collect` example
+pub fn code_base_3() -> Result<()> {
+    let redis_url = get_redis_url("redis://localhost:6379");
+    let forum = Forum::new(&redis_url)?;
+    let context = forum.topic("workwork");
+
+    let harvester = Harvester::with_context(context.clone());
+    let harvestables = harvester.harvest(3)?;
+    // do something with the completed jobs...
 }
 
 struct NoopWorker;
