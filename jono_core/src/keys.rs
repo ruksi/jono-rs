@@ -39,9 +39,9 @@ impl Keys {
         format!("{}:{}:scheduled", self.prefix, self.topic)
     }
 
-    /// Redis key for the sorted set that holds collectable jobs (not post-processed but completed)
-    /// with collection expiry timestamps as scores
-    pub fn collectable_set(&self) -> String {
-        format!("{}:{}:collectable", self.prefix, self.topic)
+    /// Redis key for the sorted set that holds harvestable jobs (not post-processed but completed)
+    /// with expiry timestamps as scores
+    pub fn harvestable_set(&self) -> String {
+        format!("{}:{}:harvestable", self.prefix, self.topic)
     }
 }

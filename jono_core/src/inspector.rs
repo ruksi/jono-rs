@@ -4,7 +4,7 @@ use redis::{Commands, Connection};
 use serde_json::Value;
 use std::collections::HashMap;
 
-use crate::{Context, Error, JobMetadata, JobStatus, Result, current_timestamp_ms};
+use crate::{current_timestamp_ms, Context, Error, JobMetadata, JobStatus, Result};
 
 /// Interface for querying job details
 pub struct Inspector {
@@ -125,12 +125,12 @@ impl Inspector {
         JobMetadata::from_hash(hash)
     }
 
-    pub fn acquire_collectable_jobs(&self, limit: usize) -> Result<Vec<JobMetadata>> {
+    pub fn acquire_harvestable_jobs(&self, limit: usize) -> Result<Vec<JobMetadata>> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
         let job_ids: Vec<String> = conn
-            .zpopmin(keys.collectable_set(), limit as isize)
+            .zpopmin(keys.harvestable_set(), limit as isize)
             .map_err(Error::Redis)?;
 
         let mut results = Vec::with_capacity(job_ids.len());
@@ -143,13 +143,13 @@ impl Inspector {
         Ok(results)
     }
 
-    pub fn clean_collectable_jobs(&self) -> Result<usize> {
+    pub fn clean_harvestable_jobs(&self) -> Result<usize> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
 
         let removed: usize = conn
-            .zrembyscore(keys.collectable_set(), "-inf", (now - 1).to_string())
+            .zrembyscore(keys.harvestable_set(), "-inf", (now - 1).to_string())
             .map_err(Error::Redis)?;
 
         Ok(removed)
