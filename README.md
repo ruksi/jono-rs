@@ -23,22 +23,23 @@ pub fn code_base_1() -> Result<()> {
     // checks "JONO_REDIS_URL", then "REDIS_URL" and defaults to given fallback
     let redis_url = get_redis_url("redis://localhost:6379");
     let forum = Forum::new(&redis_url)?;
-    let context = forum.topic("workwork");
+    let context = forum.topic("work-work");
 
     // to submit new jobs:
-    let producer = Producer::with_context(context.clone());
+    let producer = Producer::with_context(context);
     let job_id = JobPlan::new()
         .payload(json!({"my-key": "my-value"}))
         .submit(&producer)?;
 }
 
 pub fn code_base_2() -> Result<()> {
+    // creating of context is the same between code bases; usually
     let redis_url = get_redis_url("redis://localhost:6379");
     let forum = Forum::new(&redis_url)?;
-    let context = forum.topic("workwork");
+    let context = forum.topic("work-work");
 
     // to process jobs (worker code is further below):
-    let consumer = Consumer::with_context(context.clone(), NoopWorker);
+    let consumer = Consumer::with_context(context, NoopWorker);
     let outcome = consumer.run_next()?;
     match outcome {
         Some(Outcome::Success(_)) => {
@@ -54,13 +55,15 @@ pub fn code_base_2() -> Result<()> {
 }
 
 pub fn code_base_3() -> Result<()> {
+    // creating of context is the same between code bases; usually
     let redis_url = get_redis_url("redis://localhost:6379");
     let forum = Forum::new(&redis_url)?;
-    let context = forum.topic("workwork");
+    let context = forum.topic("work-work");
 
-    let harvester = Harvester::with_context(context.clone());
+    // to post-process job results:
+    let harvester = Harvester::with_context(context);
     let harvestables = harvester.harvest(3)?;
-    // do something with the completed jobs...
+    // do something with the completed job payload and outcome
 }
 
 struct NoopWorker;
