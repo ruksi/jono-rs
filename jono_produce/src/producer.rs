@@ -13,8 +13,8 @@ impl Producer {
         Self { context }
     }
 
-    /// Send a new job to the queue
-    pub fn dispatch_job(&self, job_plan: JobPlan) -> Result<String> {
+    /// Submit a new job to the queue
+    pub fn submit_job(&self, job_plan: JobPlan) -> Result<String> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
@@ -64,7 +64,7 @@ impl Producer {
             info!(
                 job_id = %job_id,
                 priority = %job_plan.get_priority(),
-                "Job dispatched to queue"
+                "Job sent to queue"
             );
         }
 

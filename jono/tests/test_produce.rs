@@ -2,20 +2,20 @@
 
 mod common;
 
+use common::create_test_context;
 use jono::prelude::*;
 use jono_core::{current_timestamp_ms, generate_job_id};
 use serde_json::json;
-use common::create_test_context;
 
 #[test]
-fn test_dispatch_job() -> Result<()> {
-    let context = create_test_context("test_dispatch");
+fn test_submit_job() -> Result<()> {
+    let context = create_test_context("test_submit");
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
 
     let job_id = JobPlan::new()
         .payload(json!({"one": 1, "two": 2}))
-        .dispatch(&producer)?;
+        .submit(&producer)?;
 
     let metadata = inspector.get_job_metadata(&job_id)?;
     assert_eq!(metadata.payload, json!({"one": 1, "two": 2}));
@@ -26,7 +26,7 @@ fn test_dispatch_job() -> Result<()> {
 }
 
 #[test]
-fn test_dispatch_scheduled_job() -> Result<()> {
+fn test_submit_scheduled_job() -> Result<()> {
     let context = create_test_context("test_schedule");
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
@@ -36,7 +36,7 @@ fn test_dispatch_scheduled_job() -> Result<()> {
     let job_id = JobPlan::new()
         .payload(payload)
         .scheduled_for(future_time)
-        .dispatch(&producer)?;
+        .submit(&producer)?;
 
     assert!(inspector.job_exists(&job_id)?);
     inspector.get_job_metadata(&job_id)?;
@@ -54,7 +54,7 @@ fn test_cancel_job() -> Result<()> {
 
     let job_id = JobPlan::new()
         .payload(json!({ "action": "cancel this soon!" }))
-        .dispatch(&producer)?;
+        .submit(&producer)?;
 
     assert!(producer.cancel_job(&job_id, 0).is_ok());
 
@@ -74,7 +74,7 @@ fn test_clean_job() -> Result<()> {
 
     let job_id = JobPlan::new()
         .payload(json!({ "action": "clean this soon!" }))
-        .dispatch(&producer)?;
+        .submit(&producer)?;
 
     // before clean
     assert!(inspector.job_exists(&job_id)?);
@@ -108,4 +108,3 @@ fn test_job_not_found_for_cancel() {
         Error::NotFound(_)
     ));
 }
-

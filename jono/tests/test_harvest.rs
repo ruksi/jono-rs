@@ -25,7 +25,7 @@ fn test_basics() -> Result<()> {
 
     let job_id = JobPlan::new()
         .payload(json!({"action": "test_action"}))
-        .dispatch(&producer)?;
+        .submit(&producer)?;
     assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
 
     assert_eq!(harvester.harvest(1)?.len(), 0);

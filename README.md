@@ -29,7 +29,7 @@ pub fn code_base_1() -> Result<()> {
     let producer = Producer::with_context(context.clone());
     let job_id = JobPlan::new()
         .payload(json!({"my-key": "my-value"}))
-        .dispatch(&producer)?;
+        .submit(&producer)?;
 }
 
 pub fn code_base_2() -> Result<()> {
