@@ -60,10 +60,10 @@ impl JobPlan {
         self.scheduled_for
     }
 
-    pub fn dispatch(self, producer: &crate::Producer) -> Result<String> {
+    pub fn submit(self, producer: &crate::Producer) -> Result<String> {
         if self.payload.is_none() {
             return Err(Error::InvalidJob("Job payload is required".to_string()));
         }
-        producer.dispatch_job(self)
+        producer.submit_job(self)
     }
 }

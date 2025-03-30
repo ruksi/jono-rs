@@ -21,7 +21,7 @@ fn test_basics() -> Result<()> {
     let producer = Producer::with_context(context.clone());
     let job_id = JobPlan::new()
         .payload(json!({"action": "test_action"}))
-        .dispatch(&producer)?;
+        .submit(&producer)?;
     assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
@@ -46,7 +46,7 @@ fn test_with_config() -> Result<()> {
     let producer = Producer::with_context(context.clone());
     let job_id = JobPlan::new()
         .payload(json!({"action": "configured_action"}))
-        .dispatch(&producer)?;
+        .submit(&producer)?;
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker).with_config(
         ConsumerConfig::new()
