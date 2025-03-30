@@ -127,6 +127,7 @@ impl Producer {
             .zrem(keys.running_set(), job_id).ignore()
             .zrem(keys.scheduled_set(), job_id).ignore()
             .zrem(keys.canceled_set(), job_id).ignore()
+            .zrem(keys.harvestable_set(), job_id).ignore()
             .del(keys.job_metadata_hash(job_id))
             .query(&mut conn)
             .map_err(Error::Redis)?;

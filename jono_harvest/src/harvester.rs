@@ -11,6 +11,7 @@ impl Harvester {
         Self { context }
     }
 
+    /// Harvest jobs that have been completed and are ready for post-processing (just-once)
     pub fn harvest(&self, limit: usize) -> Result<Vec<JobMetadata>> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
@@ -31,7 +32,8 @@ impl Harvester {
         Ok(results)
     }
 
-    pub fn clean_harvestable_set(&self) -> Result<usize> {
+    /// Clean up expired entries from the harvestable set (they weren't post-processed)
+    pub fn clean_expired_harvest(&self) -> Result<usize> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
