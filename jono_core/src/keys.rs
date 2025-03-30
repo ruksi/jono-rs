@@ -29,14 +29,14 @@ impl Keys {
         format!("{}:{}:running", self.prefix, self.topic)
     }
 
-    /// Redis key for the sorted set that communicates which jobs have been canceled with grace period timestamps as scores
-    pub fn canceled_set(&self) -> String {
-        format!("{}:{}:canceled", self.prefix, self.topic)
-    }
-
     /// Redis key for the sorted set that holds the scheduled jobs with to-be-executed timestamps as scores
     pub fn scheduled_set(&self) -> String {
         format!("{}:{}:scheduled", self.prefix, self.topic)
+    }
+
+    /// Redis key for the sorted set that communicates which jobs have been canceled with grace period timestamps as scores
+    pub fn canceled_set(&self) -> String {
+        format!("{}:{}:canceled", self.prefix, self.topic)
     }
 
     /// Redis key for the sorted set that holds harvestable jobs (not post-processed but completed)
