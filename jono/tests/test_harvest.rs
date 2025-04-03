@@ -4,6 +4,7 @@ mod common;
 
 use common::create_test_context;
 use jono::prelude::*;
+use jono_core::Result;
 use serde_json::json;
 
 struct NoopWorker;

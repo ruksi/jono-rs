@@ -22,6 +22,5 @@ pub use keys::Keys;
 pub use util::{current_timestamp_ms, generate_job_id, get_redis_url};
 
 pub mod prelude {
-    pub use crate::{Context, Forum, Inspector, JobMetadata, JobStatus};
-    pub use crate::{JonoError, Result};
+    pub use crate::{Context, Forum, Inspector, JobMetadata, JobStatus, JonoError};
 }

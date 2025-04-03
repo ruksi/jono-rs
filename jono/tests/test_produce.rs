@@ -4,7 +4,7 @@ mod common;
 
 use common::create_test_context;
 use jono::prelude::*;
-use jono_core::{current_timestamp_ms, generate_job_id};
+use jono_core::{Result, current_timestamp_ms, generate_job_id};
 use serde_json::json;
 
 #[test]
