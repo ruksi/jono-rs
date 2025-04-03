@@ -40,7 +40,7 @@ impl Inspector {
 
         let exists: bool = conn.exists(keys.job_metadata_hash(job_id))?;
         if !exists {
-            return Err(JonoError::NotFound(format!("Job {} not found", job_id)));
+            return Err(JonoError::JobNotFound(job_id.to_string()));
         }
 
         let in_running_set: bool = conn
@@ -102,9 +102,10 @@ impl Inspector {
         let keys = self.context.keys();
 
         let metadata_key = keys.job_metadata_hash(job_id);
+
         let exists: bool = conn.exists(&metadata_key)?;
         if !exists {
-            return Err(JonoError::NotFound(format!("Job {} not found", job_id)));
+            return Err(JonoError::JobNotFound(job_id.to_string()));
         }
 
         let hash: HashMap<String, String> = conn.hgetall(&metadata_key)?;

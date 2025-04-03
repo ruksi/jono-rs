@@ -76,7 +76,7 @@ impl Producer {
 
         let exists: bool = conn.exists(metadata_key)?;
         if !exists {
-            return Err(JonoError::NotFound(format!("Job {} not found", job_id)));
+            return Err(JonoError::JobNotFound(job_id.to_string()));
         }
 
         #[rustfmt::skip]

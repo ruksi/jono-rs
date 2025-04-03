@@ -10,6 +10,6 @@ fn test_job_not_found_for_metadata() {
     let unknown_job_id = generate_job_id();
     assert!(matches!(
         inspector.get_job_metadata(&unknown_job_id).err().unwrap(),
-        JonoError::NotFound(_)
+        JonoError::JobNotFound(_)
     ));
 }
