@@ -3,6 +3,7 @@
 use redis::{Commands, Connection};
 use serde_json::Value;
 use std::collections::HashMap;
+use std::sync::LazyLock;
 
 use crate::{Context, JobMetadata, JobStatus, JonoError, Result};
 
@@ -112,7 +113,80 @@ impl Inspector {
         JobMetadata::from_hash(hash)
     }
 
+    /// Get the current state of all jobs in the Jono system.
+    pub fn get_current_jobs(&self) -> Result<CurrentJobs> {
+        let keys = self.context.keys();
+        let mut conn = self.get_connection()?;
+
+        let as_text: String = GET_CURRENT_JOBS_SCRIPT
+            .key(keys.queued_set())
+            .key(keys.running_set())
+            .key(keys.scheduled_set())
+            .key(keys.canceled_set())
+            .key(keys.harvestable_set())
+            .invoke(&mut conn)?;
+
+        let as_json: Value = serde_json::from_str(&as_text)?;
+        let current_jobs = CurrentJobs::from_json_value(&as_json);
+
+        Ok(current_jobs)
+    }
+
     fn get_connection(&self) -> Result<Connection> {
         self.context.get_connection()
     }
+}
+
+static GET_CURRENT_JOBS_SCRIPT: LazyLock<redis::Script> = LazyLock::new(|| {
+    redis::Script::new(
+        // language=Lua
+        r#"
+            local result = {}
+            result['queued'] = redis.call('ZRANGE', KEYS[1], 0, -1)
+            result['running'] = redis.call('ZRANGE', KEYS[2], 0, -1)
+            result['scheduled'] = redis.call('ZRANGE', KEYS[3], 0, -1)
+            result['canceled'] = redis.call('ZRANGE', KEYS[4], 0, -1)
+            result['harvestable'] = redis.call('ZRANGE', KEYS[5], 0, -1)
+            return cjson.encode(result)
+        "#,
+    )
+});
+
+/// Represents the current state of all jobs in the Jono system.
+#[derive(Debug, Clone)]
+pub struct CurrentJobs {
+    /// Jobs in the queued set waiting to be processed
+    pub queued: Vec<String>,
+    /// Jobs currently being processed by workers
+    pub running: Vec<String>,
+    /// Jobs scheduled to run at a future time
+    pub scheduled: Vec<String>,
+    /// Jobs that have been explicitly canceled
+    pub canceled: Vec<String>,
+    /// Jobs that are ready to be harvested (completed jobs)
+    pub harvestable: Vec<String>,
+}
+
+impl CurrentJobs {
+    pub fn from_json_value(value: &Value) -> Self {
+        Self {
+            queued: extract_string_array(&value, "queued"),
+            running: extract_string_array(&value, "running"),
+            scheduled: extract_string_array(&value, "scheduled"),
+            canceled: extract_string_array(&value, "canceled"),
+            harvestable: extract_string_array(&value, "harvestable"),
+        }
+    }
+}
+
+fn extract_string_array(value: &Value, key: &str) -> Vec<String> {
+    value
+        .get(key)
+        .and_then(|v| v.as_array())
+        .map(|arr| {
+            arr.iter()
+                .filter_map(|item| item.as_str().map(String::from))
+                .collect()
+        })
+        .unwrap_or_default()
 }

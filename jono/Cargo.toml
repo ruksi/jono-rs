@@ -21,5 +21,6 @@ jono_consume = { path = "../jono_consume", version = "=0.1.6-rc.5", default-feat
 jono_harvest = { path = "../jono_harvest", version = "=0.1.6-rc.5", default-features = false, optional = true }
 
 [dev-dependencies]
+redis.workspace = true
 serde.workspace = true
 serde_json.workspace = true

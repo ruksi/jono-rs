@@ -233,6 +233,7 @@ dependencies = [
  "jono_core",
  "jono_harvest",
  "jono_produce",
+ "redis",
  "serde",
  "serde_json",
 ]
