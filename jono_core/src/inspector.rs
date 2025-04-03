@@ -118,6 +118,7 @@ impl Inspector {
         let keys = self.context.keys();
         let mut conn = self.get_connection()?;
 
+        // TODO: do I need to handle TRYAGAIN?
         let as_text: String = GET_CURRENT_JOBS_SCRIPT
             .key(keys.queued_set())
             .key(keys.running_set())
