@@ -1,7 +1,8 @@
 mod common;
 
 use common::create_test_context;
-use jono_core::{JonoError, Inspector, generate_job_id};
+use jono::prelude::*;
+use jono_core::generate_job_id;
 
 #[test]
 fn test_job_not_found_for_metadata() {

@@ -11,6 +11,5 @@ pub use consumer_config::ConsumerConfig;
 pub use worker::{Outcome, Worker, Workload};
 
 pub mod prelude {
-    pub use crate::ConsumerConfig;
-    pub use crate::{Consumer, Outcome, Worker, Workload};
+    pub use crate::{Consumer, ConsumerConfig, Outcome, Worker, Workload};
 }
