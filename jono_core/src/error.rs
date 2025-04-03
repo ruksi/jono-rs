@@ -1,9 +1,9 @@
 /// Return for Jono operations that can succeed (OK) or fail (Err)
-pub type Result<T> = std::result::Result<T, Error>;
+pub type Result<T> = std::result::Result<T, JonoError>;
 
 /// All the possible errors from Jono operations
 #[derive(thiserror::Error, Debug)]
-pub enum Error {
+pub enum JonoError {
     #[error("Redis error: {0}")]
     Redis(#[from] redis::RedisError),
     #[error("Serialization error: {0}")]

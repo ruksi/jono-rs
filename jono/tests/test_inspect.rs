@@ -1,7 +1,7 @@
 mod common;
 
 use common::create_test_context;
-use jono_core::{Error, Inspector, generate_job_id};
+use jono_core::{JonoError, Inspector, generate_job_id};
 
 #[test]
 fn test_job_not_found_for_metadata() {
@@ -10,6 +10,6 @@ fn test_job_not_found_for_metadata() {
     let unknown_job_id = generate_job_id();
     assert!(matches!(
         inspector.get_job_metadata(&unknown_job_id).err().unwrap(),
-        Error::NotFound(_)
+        JonoError::NotFound(_)
     ));
 }

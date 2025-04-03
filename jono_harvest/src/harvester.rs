@@ -18,7 +18,7 @@ impl Harvester {
 
         let job_ids: Vec<String> = conn
             .zpopmin(keys.harvestable_set(), limit as isize)
-            .map_err(Error::Redis)?;
+            .map_err(JonoError::Redis)?;
 
         let inspector = Inspector::with_context(self.context.clone());
 
@@ -40,7 +40,7 @@ impl Harvester {
 
         let removed: usize = conn
             .zrembyscore(keys.harvestable_set(), "-inf", (now - 1).to_string())
-            .map_err(Error::Redis)?;
+            .map_err(JonoError::Redis)?;
 
         Ok(removed)
     }

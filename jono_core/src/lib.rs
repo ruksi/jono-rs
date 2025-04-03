@@ -13,7 +13,7 @@ mod keys;
 mod util;
 
 pub use context::Context;
-pub use error::{Error, Result};
+pub use error::{JonoError, Result};
 pub use forum::Forum;
 pub use inspector::Inspector;
 pub use job_metadata::JobMetadata;
@@ -23,5 +23,5 @@ pub use util::{current_timestamp_ms, generate_job_id, get_redis_url};
 
 pub mod prelude {
     pub use crate::{Context, Forum, Inspector, JobMetadata, JobStatus};
-    pub use crate::{Error, Result};
+    pub use crate::{JonoError, Result};
 }

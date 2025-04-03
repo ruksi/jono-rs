@@ -88,11 +88,11 @@ fn test_clean_job() -> Result<()> {
     assert!(!inspector.job_exists(&job_id)?);
     assert!(matches!(
         inspector.get_job_metadata(&job_id).err().unwrap(),
-        Error::NotFound(_)
+        JonoError::NotFound(_)
     ));
     assert!(matches!(
         inspector.get_job_status(&job_id).err().unwrap(),
-        Error::NotFound(_)
+        JonoError::NotFound(_)
     ));
 
     Ok(())
@@ -105,6 +105,6 @@ fn test_job_not_found_for_cancel() {
     let unknown_job_id = generate_job_id();
     assert!(matches!(
         producer.cancel_job(&unknown_job_id, 0).err().unwrap(),
-        Error::NotFound(_)
+        JonoError::NotFound(_)
     ));
 }

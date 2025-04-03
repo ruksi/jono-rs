@@ -1,4 +1,4 @@
-use crate::{Error, Forum, Keys, Result};
+use crate::{JonoError, Forum, Keys, Result};
 use redis::Connection;
 
 /// Topic-specific context for Jono operations
@@ -24,7 +24,7 @@ impl Context {
         self.forum
             .redis_client()
             .get_connection()
-            .map_err(Error::Redis)
+            .map_err(JonoError::Redis)
     }
 
     /// Get the topic name

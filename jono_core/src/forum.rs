@@ -1,4 +1,4 @@
-use crate::{Error, Result};
+use crate::{JonoError, Result};
 use redis::Client as RedisClient;
 
 /// Central Redis connection pool that manages access to all topics
@@ -9,7 +9,7 @@ pub struct Forum {
 impl Forum {
     /// Create a new forum with the specified Redis URL
     pub fn new(redis_url: &str) -> Result<Self> {
-        let redis_client = RedisClient::open(redis_url).map_err(Error::Redis)?;
+        let redis_client = RedisClient::open(redis_url).map_err(JonoError::Redis)?;
         Ok(Self { redis_client })
     }
 

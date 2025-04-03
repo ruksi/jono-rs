@@ -1,6 +1,6 @@
 use crate::consumer_config::ConsumerConfig;
 use crate::{Outcome, Worker, Workload};
-use jono_core::{current_timestamp_ms, Context, Error, Inspector, Result};
+use jono_core::{Context, Inspector, JonoError, Result, current_timestamp_ms};
 use redis::{Commands, Connection};
 use serde_json::json;
 use std::thread;
@@ -42,7 +42,7 @@ impl<W: Worker> Consumer<W> {
                     eprintln!("Error processing job: {}", e);
 
                     if consecutive_errors >= self.config.get_max_consecutive_errors() {
-                        return Err(Error::InvalidJob(format!(
+                        return Err(JonoError::InvalidJob(format!(
                             "Too many consecutive errors ({})",
                             consecutive_errors
                         )));
@@ -67,8 +67,9 @@ impl<W: Worker> Consumer<W> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
-        let entries: Vec<(String, i64)> =
-            conn.zpopmin(keys.queued_set(), 1).map_err(Error::Redis)?;
+        let entries: Vec<(String, i64)> = conn
+            .zpopmin(keys.queued_set(), 1)
+            .map_err(JonoError::Redis)?;
 
         if let Some((job_id, _)) = entries.first() {
             let inspector = Inspector::with_context(self.context.clone());
@@ -93,7 +94,7 @@ impl<W: Worker> Consumer<W> {
             .hset(&metadata_key, "status", "running")
             .hset(&metadata_key, "started_at", now.to_string())
             .query(&mut conn)
-            .map_err(Error::Redis)?;
+            .map_err(JonoError::Redis)?;
 
         Ok(())
     }
@@ -127,7 +128,7 @@ impl<W: Worker> Consumer<W> {
         let keys = self.context.keys();
 
         let out_data = outcome.unwrap_or(json!(null));
-        let out_json = serde_json::to_string(&out_data).map_err(Error::Serialization)?;
+        let out_json = serde_json::to_string(&out_data).map_err(JonoError::Serialization)?;
         let metadata_key = keys.job_metadata_hash(job_id);
 
         let now = current_timestamp_ms();
@@ -142,7 +143,7 @@ impl<W: Worker> Consumer<W> {
             .hset(&metadata_key, "outcome", out_json)
             .expire(&metadata_key, ttl_ms / 1000)
             .query(&mut conn)
-            .map_err(Error::Redis)?;
+            .map_err(JonoError::Redis)?;
 
         Ok(())
     }

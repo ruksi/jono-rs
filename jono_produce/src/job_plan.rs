@@ -1,4 +1,4 @@
-use jono_core::{Error, Result};
+use jono_core::{JonoError, Result};
 use serde::{Deserialize, Serialize};
 
 /// Job plan represents **a description** of a task to be queued soon and, _hopefully_, completed.
@@ -62,7 +62,7 @@ impl JobPlan {
 
     pub fn submit(self, producer: &crate::Producer) -> Result<String> {
         if self.payload.is_none() {
-            return Err(Error::InvalidJob("Job payload is required".to_string()));
+            return Err(JonoError::InvalidJob("Job payload is required".to_string()));
         }
         producer.submit_job(self)
     }

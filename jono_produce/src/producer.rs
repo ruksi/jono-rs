@@ -43,13 +43,13 @@ impl Producer {
             .hset(&metadata_key, "attempt_history", "[]")
             .hset(&metadata_key, "outcome", "null")
             .query(&mut conn)
-            .map_err(Error::Redis)?;
+            .map_err(JonoError::Redis)?;
 
         let scheduled_for = job_plan.get_scheduled_for();
         if scheduled_for > 0 && scheduled_for > now {
             let _: () = conn
                 .zadd::<_, _, _, ()>(keys.scheduled_set(), &job_id, scheduled_for)
-                .map_err(Error::Redis)?;
+                .map_err(JonoError::Redis)?;
 
             info!(
                 job_id = %job_id,
@@ -59,7 +59,7 @@ impl Producer {
         } else {
             let _: () = conn
                 .zadd::<_, _, _, ()>(keys.queued_set(), &job_id, job_plan.get_priority())
-                .map_err(Error::Redis)?;
+                .map_err(JonoError::Redis)?;
 
             info!(
                 job_id = %job_id,
@@ -78,9 +78,9 @@ impl Producer {
         let keys = self.context.keys();
         let metadata_key = keys.job_metadata_hash(job_id);
 
-        let exists: bool = conn.exists(metadata_key).map_err(Error::Redis)?;
+        let exists: bool = conn.exists(metadata_key).map_err(JonoError::Redis)?;
         if !exists {
-            return Err(Error::NotFound(format!("Job {} not found", job_id)));
+            return Err(JonoError::NotFound(format!("Job {} not found", job_id)));
         }
 
         #[rustfmt::skip]
@@ -90,13 +90,13 @@ impl Producer {
                 .zrem(keys.scheduled_set(), job_id)
                 .zscore(keys.running_set(), job_id)
                 .query(&mut conn)
-                .map_err(Error::Redis)?;
+                .map_err(JonoError::Redis)?;
 
         if last_heartbeat.is_some() {
             let grace_end = now + grace_period_ms;
             let _: () = conn
                 .zadd::<_, _, _, ()>(keys.canceled_set(), job_id, grace_end)
-                .map_err(Error::Redis)?;
+                .map_err(JonoError::Redis)?;
             info!(
                 job_id = %job_id,
                 grace_end = %grace_end,
@@ -108,7 +108,7 @@ impl Producer {
         if removed_from_queued > 0 || removed_from_scheduled > 0 {
             let _: () = conn
                 .zadd::<_, _, _, ()>(keys.canceled_set(), job_id, now)
-                .map_err(Error::Redis)?;
+                .map_err(JonoError::Redis)?;
             info!(job_id = %job_id, "Job canceled successfully");
             return Ok(true);
         }
@@ -130,7 +130,7 @@ impl Producer {
             .zrem(keys.harvestable_set(), job_id).ignore()
             .del(keys.job_metadata_hash(job_id))
             .query(&mut conn)
-            .map_err(Error::Redis)?;
+            .map_err(JonoError::Redis)?;
 
         Ok(metadata_deleted > 0)
     }
