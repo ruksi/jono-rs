@@ -4,7 +4,7 @@ use redis::{Commands, Connection};
 use serde_json::Value;
 use std::collections::HashMap;
 
-use crate::{Context, JonoError, JobMetadata, JobStatus, Result};
+use crate::{Context, JobMetadata, JobStatus, JonoError, Result};
 
 /// Interface for querying job details
 pub struct Inspector {
@@ -20,9 +20,7 @@ impl Inspector {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
-        let exists: bool = conn
-            .exists(keys.job_metadata_hash(job_id))
-            .map_err(JonoError::Redis)?;
+        let exists: bool = conn.exists(keys.job_metadata_hash(job_id))?;
 
         Ok(exists)
     }
@@ -31,9 +29,7 @@ impl Inspector {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
-        let score: Option<i64> = conn
-            .zscore(keys.canceled_set(), job_id)
-            .map_err(JonoError::Redis)?;
+        let score: Option<i64> = conn.zscore(keys.canceled_set(), job_id)?;
 
         Ok(score.is_some())
     }
@@ -42,63 +38,53 @@ impl Inspector {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
-        let exists: bool = conn
-            .exists(keys.job_metadata_hash(job_id))
-            .map_err(JonoError::Redis)?;
+        let exists: bool = conn.exists(keys.job_metadata_hash(job_id))?;
         if !exists {
             return Err(JonoError::NotFound(format!("Job {} not found", job_id)));
         }
 
         let in_running_set: bool = conn
-            .zscore::<_, _, Option<i64>>(keys.running_set(), job_id)
-            .map_err(JonoError::Redis)?
+            .zscore::<_, _, Option<i64>>(keys.running_set(), job_id)?
             .is_some();
         if in_running_set {
             return Ok(JobStatus::Running);
         }
 
         let in_queued_set: bool = conn
-            .zscore::<_, _, Option<i64>>(keys.queued_set(), job_id)
-            .map_err(JonoError::Redis)?
+            .zscore::<_, _, Option<i64>>(keys.queued_set(), job_id)?
             .is_some();
         if in_queued_set {
             return Ok(JobStatus::Queued);
         }
 
         let in_scheduled_set: bool = conn
-            .zscore::<_, _, Option<i64>>(keys.scheduled_set(), job_id)
-            .map_err(JonoError::Redis)?
+            .zscore::<_, _, Option<i64>>(keys.scheduled_set(), job_id)?
             .is_some();
         if in_scheduled_set {
             return Ok(JobStatus::Scheduled);
         }
 
         let in_canceled_set: bool = conn
-            .zscore::<_, _, Option<i64>>(keys.canceled_set(), job_id)
-            .map_err(JonoError::Redis)?
+            .zscore::<_, _, Option<i64>>(keys.canceled_set(), job_id)?
             .is_some();
         if in_canceled_set {
             return Ok(JobStatus::Canceled);
         }
 
-        let has_completed_at_field: Option<String> = conn
-            .hget(keys.job_metadata_hash(job_id), "completed_at")
-            .map_err(JonoError::Redis)?;
+        let has_completed_at_field: Option<String> =
+            conn.hget(keys.job_metadata_hash(job_id), "completed_at")?;
         if has_completed_at_field.is_some() {
             return Ok(JobStatus::Completed);
         }
 
-        let attempt_history: Option<String> = conn
-            .hget(keys.job_metadata_hash(job_id), "attempt_history")
-            .map_err(JonoError::Redis)?;
+        let attempt_history: Option<String> =
+            conn.hget(keys.job_metadata_hash(job_id), "attempt_history")?;
         if let Some(history_str) = attempt_history {
-            let history: Value =
-                serde_json::from_str(&history_str).map_err(JonoError::Serialization)?;
+            let history: Value = serde_json::from_str(&history_str)?;
 
             if let Value::Array(attempts) = history {
                 let max_attempts: u32 = conn
-                    .hget::<_, _, Option<String>>(keys.job_metadata_hash(job_id), "max_attempts")
-                    .map_err(JonoError::Redis)?
+                    .hget::<_, _, Option<String>>(keys.job_metadata_hash(job_id), "max_attempts")?
                     .and_then(|m| m.parse().ok())
                     .unwrap_or(3);
 
@@ -116,12 +102,12 @@ impl Inspector {
         let keys = self.context.keys();
 
         let metadata_key = keys.job_metadata_hash(job_id);
-        let exists: bool = conn.exists(&metadata_key).map_err(JonoError::Redis)?;
+        let exists: bool = conn.exists(&metadata_key)?;
         if !exists {
             return Err(JonoError::NotFound(format!("Job {} not found", job_id)));
         }
 
-        let hash: HashMap<String, String> = conn.hgetall(&metadata_key).map_err(JonoError::Redis)?;
+        let hash: HashMap<String, String> = conn.hgetall(&metadata_key)?;
         JobMetadata::from_hash(hash)
     }
 

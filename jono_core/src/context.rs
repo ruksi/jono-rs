@@ -1,4 +1,4 @@
-use crate::{JonoError, Forum, Keys, Result};
+use crate::{Forum, JonoError, Keys, Result};
 use redis::Connection;
 
 /// Topic-specific context for Jono operations

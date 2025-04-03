@@ -67,9 +67,7 @@ impl<W: Worker> Consumer<W> {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
-        let entries: Vec<(String, i64)> = conn
-            .zpopmin(keys.queued_set(), 1)
-            .map_err(JonoError::Redis)?;
+        let entries: Vec<(String, i64)> = conn.zpopmin(keys.queued_set(), 1)?;
 
         if let Some((job_id, _)) = entries.first() {
             let inspector = Inspector::with_context(self.context.clone());
@@ -93,8 +91,7 @@ impl<W: Worker> Consumer<W> {
             .zadd(keys.running_set(), job_id, expiry)
             .hset(&metadata_key, "status", "running")
             .hset(&metadata_key, "started_at", now.to_string())
-            .query(&mut conn)
-            .map_err(JonoError::Redis)?;
+            .query(&mut conn)?;
 
         Ok(())
     }
@@ -128,7 +125,7 @@ impl<W: Worker> Consumer<W> {
         let keys = self.context.keys();
 
         let out_data = outcome.unwrap_or(json!(null));
-        let out_json = serde_json::to_string(&out_data).map_err(JonoError::Serialization)?;
+        let out_json = serde_json::to_string(&out_data)?;
         let metadata_key = keys.job_metadata_hash(job_id);
 
         let now = current_timestamp_ms();
@@ -142,8 +139,7 @@ impl<W: Worker> Consumer<W> {
             .hset(&metadata_key, "completed_at", now.to_string())
             .hset(&metadata_key, "outcome", out_json)
             .expire(&metadata_key, ttl_ms / 1000)
-            .query(&mut conn)
-            .map_err(JonoError::Redis)?;
+            .query(&mut conn)?;
 
         Ok(())
     }

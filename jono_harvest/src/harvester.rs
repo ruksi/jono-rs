@@ -16,9 +16,7 @@ impl Harvester {
         let mut conn = self.get_connection()?;
         let keys = self.context.keys();
 
-        let job_ids: Vec<String> = conn
-            .zpopmin(keys.harvestable_set(), limit as isize)
-            .map_err(JonoError::Redis)?;
+        let job_ids: Vec<String> = conn.zpopmin(keys.harvestable_set(), limit as isize)?;
 
         let inspector = Inspector::with_context(self.context.clone());
 
@@ -38,9 +36,8 @@ impl Harvester {
         let keys = self.context.keys();
         let now = current_timestamp_ms();
 
-        let removed: usize = conn
-            .zrembyscore(keys.harvestable_set(), "-inf", (now - 1).to_string())
-            .map_err(JonoError::Redis)?;
+        let removed: usize =
+            conn.zrembyscore(keys.harvestable_set(), "-inf", (now - 1).to_string())?;
 
         Ok(removed)
     }
