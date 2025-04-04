@@ -11,7 +11,7 @@ pub struct Context {
 
 impl Context {
     /// Create a new context with the given forum and topic
-    pub fn new(forum: Forum, topic: &str) -> Self {
+    pub fn new(forum: Forum, topic: impl ToString) -> Self {
         Self {
             forum,
             topic: topic.to_string(),
@@ -38,7 +38,7 @@ impl Context {
     }
 
     /// Create a new context for a different topic using the same forum
-    pub fn for_topic(&self, topic: &str) -> Self {
+    pub fn clone_for_topic(&self, topic: impl ToString) -> Self {
         Self::new(self.forum.clone(), topic)
     }
 }

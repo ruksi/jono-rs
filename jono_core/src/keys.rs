@@ -7,7 +7,7 @@ pub struct Keys {
 
 impl Keys {
     /// Create a new Redis key generator with the default "jono" prefix and over given topic
-    pub fn with_topic(topic: &str) -> Self {
+    pub fn with_topic(topic: impl ToString) -> Self {
         Self {
             prefix: "jono".to_string(),
             topic: topic.to_string(),

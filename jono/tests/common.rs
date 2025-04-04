@@ -1,7 +1,7 @@
-use jono_core::{Context, Forum, get_redis_url};
+use jono_core::{Context, Forum};
 
-pub fn create_test_context(topic: &str) -> Context {
-    let redis_url = get_redis_url("redis://localhost:6380");
-    let forum = Forum::new(&redis_url).expect("Failed to connect to Redis");
-    forum.topic(topic)
+pub fn create_test_context(topic: impl ToString) -> Context {
+    Forum::new("redis://localhost:6380")
+        .expect("Failed to connect to Redis")
+        .topic(topic)
 }

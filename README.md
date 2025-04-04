@@ -8,21 +8,25 @@
 + [ULIDs](https://github.com/ulid/spec) are lexicographically ordered based on generation time
   by definition so they can be used as member values in Redis sorted sets for FIFO ordering
 
-These together allow for a simple priority queue where
-[`ZPOPMIN`](https://redis.io/docs/latest/commands/zpopmin/) can be used to
-atomically get the next job to be processed.
+These together allow for a priority queue where [`ZPOPMIN`](https://redis.io/docs/latest/commands/zpopmin/) 
+is used to get the next job to be processed.
 
 ## Usage
 
+```toml
+[dependencies]
+jono = "0.1.6-rc.6"
+# or
+jono = { version = "0.1.6-rc.6", default-features = false, features = ["produce"] }
+```
+
 ```rust
 use jono::prelude::*;
-use jono_core::get_redis_url;
+use jono_core::Result;
 use serde_json::json;
 
-pub fn code_base_1() -> Result<()> {
-    // checks "JONO_REDIS_URL", then "REDIS_URL" and defaults to given fallback
-    let redis_url = get_redis_url("redis://localhost:6379");
-    let forum = Forum::new(&redis_url)?;
+pub fn codebase_1() -> Result<()> {
+    let forum = Forum::try_from_env()?; // "JONO_REDIS_URL" > "REDIS_URL" > Err
     let context = forum.topic("work-work");
 
     // to submit new jobs:
@@ -31,19 +35,29 @@ pub fn code_base_1() -> Result<()> {
         .payload(json!({"my-key": "my-value"}))
         .submit(&producer)?;
 }
+```
 
-pub fn code_base_2() -> Result<()> {
-    // creating of context is the same between code bases; usually
-    let redis_url = get_redis_url("redis://localhost:6379");
-    let forum = Forum::new(&redis_url)?;
+```toml
+[dependencies]
+jono = "0.1.6-rc.6"
+# or
+jono = { version = "0.1.6-rc.6", default-features = false, features = ["consume"] }
+```
+
+```rust
+use jono::prelude::*;
+use jono_core::Result;
+
+pub fn codebase_2() -> Result<()> {
+    let forum = Forum::try_from_env()?;  // "JONO_REDIS_URL" > "REDIS_URL" > Err
     let context = forum.topic("work-work");
 
-    // to process jobs (worker code is further below):
+    // to process jobs; the worker code is further below:
     let consumer = Consumer::with_context(context, NoopWorker);
     let outcome = consumer.run_next()?;
     match outcome {
         Some(Outcome::Success(_)) => {
-            todo!("You want to do something on the worker post-job?");
+            todo!("You want to do something on the worker right after?");
         }
         Some(Outcome::Failure(_)) => {
             todo!("... or specifically on failure?");
@@ -54,23 +68,33 @@ pub fn code_base_2() -> Result<()> {
     }
 }
 
-pub fn code_base_3() -> Result<()> {
-    // creating of context is the same between code bases; usually
-    let redis_url = get_redis_url("redis://localhost:6379");
-    let forum = Forum::new(&redis_url)?;
-    let context = forum.topic("work-work");
-
-    // to post-process job results:
-    let harvester = Harvester::with_context(context);
-    let harvestables = harvester.harvest(3)?;
-    // do something with the completed job payload and outcome
-}
-
 struct NoopWorker;
 
 impl Worker for NoopWorker {
     fn process(&self, _: &Workload) -> Result<Outcome> {
         Ok(Outcome::Success(Some(json!({"processed": true}))))
     }
+}
+```
+
+```toml
+[dependencies]
+jono = "0.1.6-rc.6"
+# or
+jono = { version = "0.1.6-rc.6", default-features = false, features = ["harvest"] }
+```
+
+```rust
+use jono::prelude::*;
+use jono_core::Result;
+
+pub fn codebase_3() -> Result<()> {
+    let forum = Forum::try_from_env()?;  // "JONO_REDIS_URL" > "REDIS_URL" > Err
+    let context = forum.topic("work-work");
+
+    // to post-process job results:
+    let harvester = Harvester::with_context(context);
+    let harvestables = harvester.harvest(3)?;
+    // do something with the completed job payload and outcome
 }
 ```

@@ -6,9 +6,10 @@ pub type Result<T> = std::result::Result<T, JonoError>;
 pub enum JonoError {
     Redis(redis::RedisError),
     Serialization(serde_json::Error),
-    JobNotFound(String),             // job id
-    InvalidJob(String),              // message with details what is invalid
-    TooManyConsecutiveErrors(usize), // the number of errors
+    JobNotFound(String),  // job id
+    InvalidJob(String),   // message with details what is invalid
+    TooManyErrors(usize), // the number of errors
+    MissingEnvVar(&'static str),
 }
 
 impl From<redis::RedisError> for JonoError {
@@ -25,26 +26,28 @@ impl From<serde_json::Error> for JonoError {
 
 impl std::fmt::Display for JonoError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        use JonoError::*;
         match self {
-            JonoError::Redis(err) => write!(f, "Redis error: {}", err),
-            JonoError::Serialization(err) => write!(f, "Serialization error: {}", err),
-            JonoError::JobNotFound(job_id) => write!(f, "Job not found: {}", job_id),
-            JonoError::InvalidJob(msg) => write!(f, "Invalid job: {}", msg),
-            JonoError::TooManyConsecutiveErrors(count) => {
-                write!(f, "Too many consecutive errors: {}", count)
-            }
+            Redis(err) => write!(f, "Redis error: {}", err),
+            Serialization(err) => write!(f, "Serialization error: {}", err),
+            JobNotFound(job_id) => write!(f, "Job not found: {}", job_id),
+            InvalidJob(msg) => write!(f, "Invalid job: {}", msg),
+            TooManyErrors(count) => write!(f, "Too many consecutive errors: {}", count),
+            MissingEnvVar(var) => write!(f, "Missing environment variable: {}", var),
         }
     }
 }
 
 impl std::error::Error for JonoError {
     fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        use JonoError::*;
         match self {
-            JonoError::Redis(err) => Some(err),
-            JonoError::Serialization(err) => Some(err),
-            JonoError::JobNotFound(_) => None,
-            JonoError::InvalidJob(_) => None,
-            JonoError::TooManyConsecutiveErrors(_) => None,
+            Redis(err) => Some(err),
+            Serialization(err) => Some(err),
+            JobNotFound(_) => None,
+            InvalidJob(_) => None,
+            TooManyErrors(_) => None,
+            MissingEnvVar(_) => None,
         }
     }
 }

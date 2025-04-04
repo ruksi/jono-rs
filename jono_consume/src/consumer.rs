@@ -42,7 +42,7 @@ impl<W: Worker> Consumer<W> {
                     eprintln!("Error processing job: {}", e);
 
                     if consecutive_errors >= self.config.get_max_consecutive_errors() {
-                        return Err(JonoError::TooManyConsecutiveErrors(consecutive_errors));
+                        return Err(JonoError::TooManyErrors(consecutive_errors));
                     }
                     thread::sleep(self.config.get_polling_interval());
                 }
