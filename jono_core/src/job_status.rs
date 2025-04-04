@@ -3,14 +3,14 @@ use std::fmt::Display;
 use std::str::FromStr;
 
 /// All the possible states that a job can be in
-#[derive(Debug, Clone, Copy, PartialEq, Eq, Serialize, Deserialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum JobStatus {
     /// The job is queued and waiting to be processed.
     Queued,
     /// The job is currently being processed by a worker.
     Running,
     /// The job has been completed successfully.
-    Completed,
+    Harvestable,
     /// The job has failed to complete after specified retries.
     Failed,
     /// The job has been specifically canceled.
@@ -24,7 +24,7 @@ impl Display for JobStatus {
         let str = match self {
             JobStatus::Queued => "queued".to_string(),
             JobStatus::Running => "running".to_string(),
-            JobStatus::Completed => "completed".to_string(),
+            JobStatus::Harvestable => "harvestable".to_string(),
             JobStatus::Failed => "failed".to_string(),
             JobStatus::Canceled => "canceled".to_string(),
             JobStatus::Scheduled => "scheduled".to_string(),
@@ -39,7 +39,7 @@ impl FromStr for JobStatus {
         match s {
             "queued" => Ok(JobStatus::Queued),
             "running" => Ok(JobStatus::Running),
-            "completed" => Ok(JobStatus::Completed),
+            "harvestable" => Ok(JobStatus::Harvestable),
             "failed" => Ok(JobStatus::Failed),
             "canceled" => Ok(JobStatus::Canceled),
             "scheduled" => Ok(JobStatus::Scheduled),

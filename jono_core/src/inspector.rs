@@ -3,7 +3,6 @@
 use redis::{Commands, Connection};
 use serde_json::Value;
 use std::collections::HashMap;
-use std::sync::LazyLock;
 
 use crate::{Context, JobMetadata, JobStatus, JonoError, Result};
 
@@ -75,7 +74,7 @@ impl Inspector {
         let has_completed_at_field: Option<String> =
             conn.hget(keys.job_metadata_hash(job_id), "completed_at")?;
         if has_completed_at_field.is_some() {
-            return Ok(JobStatus::Completed);
+            return Ok(JobStatus::Harvestable);
         }
 
         let attempt_history: Option<String> =
@@ -113,24 +112,127 @@ impl Inspector {
         JobMetadata::from_hash(hash)
     }
 
-    /// Get the current state of all jobs in the Jono system.
-    pub fn get_current_jobs(&self) -> Result<CurrentJobs> {
+    /// Get the current state of jobs by ID in the Jono system, optionally filtered by criteria in JobFilter.
+    pub fn get_status_to_job_ids(&self, filter: JobFilter) -> Result<MapStatusToJobId> {
         let keys = self.context.keys();
+
+        let states_to_fetch = match filter.states.as_deref() {
+            Some(specific_states) => specific_states,
+            None => &[
+                JobStatus::Queued,
+                JobStatus::Running,
+                JobStatus::Scheduled,
+                JobStatus::Canceled,
+                JobStatus::Harvestable,
+            ],
+        };
+
+        let mut map = MapStatusToJobId::default();
+        if states_to_fetch.is_empty() {
+            return Ok(map);
+        }
+
+        let mut pipe = redis::pipe();
+        pipe.atomic();
+
+        let mut status_to_index = Vec::new();
+
+        for status in states_to_fetch {
+            match status {
+                JobStatus::Queued => {
+                    pipe.zrange(keys.queued_set(), 0, -1);
+                    status_to_index.push(JobStatus::Queued);
+                }
+                JobStatus::Running => {
+                    pipe.zrange(keys.running_set(), 0, -1);
+                    status_to_index.push(JobStatus::Running);
+                }
+                JobStatus::Scheduled => {
+                    pipe.zrange(keys.scheduled_set(), 0, -1);
+                    status_to_index.push(JobStatus::Scheduled);
+                }
+                JobStatus::Canceled => {
+                    pipe.zrange(keys.canceled_set(), 0, -1);
+                    status_to_index.push(JobStatus::Canceled);
+                }
+                JobStatus::Harvestable => {
+                    pipe.zrange(keys.harvestable_set(), 0, -1);
+                    status_to_index.push(JobStatus::Harvestable);
+                }
+                JobStatus::Failed => {} // TODO: wait for the deadletter implementation
+            }
+        }
+
+        if status_to_index.is_empty() {
+            return Ok(map);
+        }
+
         let mut conn = self.get_connection()?;
+        let mut result: Vec<Vec<String>> = pipe.query(&mut conn)?;
 
-        // TODO: do I need to handle TRYAGAIN?
-        let as_text: String = GET_CURRENT_JOBS_SCRIPT
-            .key(keys.queued_set())
-            .key(keys.running_set())
-            .key(keys.scheduled_set())
-            .key(keys.canceled_set())
-            .key(keys.harvestable_set())
-            .invoke(&mut conn)?;
+        for (i, status) in status_to_index.iter().enumerate() {
+            if i < result.len() {
+                match status {
+                    JobStatus::Queued => map.queued = std::mem::take(&mut result[i]),
+                    JobStatus::Running => map.running = std::mem::take(&mut result[i]),
+                    JobStatus::Scheduled => map.scheduled = std::mem::take(&mut result[i]),
+                    JobStatus::Canceled => map.canceled = std::mem::take(&mut result[i]),
+                    JobStatus::Harvestable => map.harvestable = std::mem::take(&mut result[i]),
+                    JobStatus::Failed => {} // TODO: wait for the deadletter implementation
+                }
+            }
+        }
 
-        let as_json: Value = serde_json::from_str(&as_text)?;
-        let current_jobs = CurrentJobs::from_json_value(&as_json);
+        Ok(map)
+    }
 
-        Ok(current_jobs)
+    pub fn get_status_to_job_metadata(&self, filter: JobFilter) -> Result<MapStatusToJobMetadata> {
+        let status_to_job_ids = self.get_status_to_job_ids(filter.clone())?;
+
+        // TODO: this might be quite heavy if there are many jobs... should I add some iterable/stream interface too?
+
+        let process = |job_ids: &[String]| -> Vec<JobMetadata> {
+            if job_ids.is_empty() {
+                return Vec::new();
+            }
+
+            // TODO: use Redis pipelines? they should be on the same shard
+            //       as they have hash tags by topic...
+
+            let mut metadatas: Vec<JobMetadata> = Vec::with_capacity(job_ids.len());
+            for id in job_ids {
+                if let Ok(md) = self.get_job_metadata(id) {
+                    metadatas.push(md);
+                }
+            }
+            metadatas
+        };
+
+        let Some(states) = filter.states.as_deref() else {
+            return Ok(MapStatusToJobMetadata {
+                queued: process(&status_to_job_ids.queued),
+                running: process(&status_to_job_ids.running),
+                scheduled: process(&status_to_job_ids.scheduled),
+                canceled: process(&status_to_job_ids.canceled),
+                harvestable: process(&status_to_job_ids.harvestable),
+            });
+        };
+
+        let mut result = MapStatusToJobMetadata::default();
+
+        for state in states {
+            use JobStatus::*;
+            match state {
+                Queued => result.queued = process(&status_to_job_ids.queued),
+                Running => result.running = process(&status_to_job_ids.running),
+                Scheduled => result.scheduled = process(&status_to_job_ids.scheduled),
+                Canceled => result.canceled = process(&status_to_job_ids.canceled),
+                Harvestable => result.harvestable = process(&status_to_job_ids.harvestable),
+                Failed => {} // TODO: wait for the deadletter implementation
+            }
+        }
+
+        Ok(result)
     }
 
     fn get_connection(&self) -> Result<Connection> {
@@ -138,25 +240,15 @@ impl Inspector {
     }
 }
 
-static GET_CURRENT_JOBS_SCRIPT: LazyLock<redis::Script> = LazyLock::new(|| {
-    redis::Script::new(
-        // language=Lua
-        r#"
-            local result = {}
-            result['queued'] = redis.call('ZRANGE', KEYS[1], 0, -1)
-            result['running'] = redis.call('ZRANGE', KEYS[2], 0, -1)
-            result['scheduled'] = redis.call('ZRANGE', KEYS[3], 0, -1)
-            result['canceled'] = redis.call('ZRANGE', KEYS[4], 0, -1)
-            result['harvestable'] = redis.call('ZRANGE', KEYS[5], 0, -1)
-            return cjson.encode(result)
-        "#,
-    )
-});
+#[derive(Debug, Clone, Default)]
+pub struct JobFilter {
+    /// Optional list of job states to filter by, None disables this filter
+    pub states: Option<Vec<JobStatus>>,
+}
 
-/// Represents the current state of all jobs in the Jono system.
-#[derive(Debug, Clone)]
-pub struct CurrentJobs {
-    /// Jobs in the queued set waiting to be processed
+#[derive(Debug, Clone, Default)]
+pub struct MapStatusToJobId {
+    /// Jobs in waiting to be processed
     pub queued: Vec<String>,
     /// Jobs currently being processed by workers
     pub running: Vec<String>,
@@ -164,30 +256,20 @@ pub struct CurrentJobs {
     pub scheduled: Vec<String>,
     /// Jobs that have been explicitly canceled
     pub canceled: Vec<String>,
-    /// Jobs that are ready to be harvested (completed jobs)
+    /// Jobs that are ready to be harvested; completed but not post-processed
     pub harvestable: Vec<String>,
 }
 
-impl CurrentJobs {
-    pub fn from_json_value(value: &Value) -> Self {
-        Self {
-            queued: extract_string_array(&value, "queued"),
-            running: extract_string_array(&value, "running"),
-            scheduled: extract_string_array(&value, "scheduled"),
-            canceled: extract_string_array(&value, "canceled"),
-            harvestable: extract_string_array(&value, "harvestable"),
-        }
-    }
-}
-
-fn extract_string_array(value: &Value, key: &str) -> Vec<String> {
-    value
-        .get(key)
-        .and_then(|v| v.as_array())
-        .map(|arr| {
-            arr.iter()
-                .filter_map(|item| item.as_str().map(String::from))
-                .collect()
-        })
-        .unwrap_or_default()
+#[derive(Debug, Clone, Default)]
+pub struct MapStatusToJobMetadata {
+    /// Jobs in waiting to be processed
+    pub queued: Vec<JobMetadata>,
+    /// Jobs currently being processed by workers
+    pub running: Vec<JobMetadata>,
+    /// Jobs scheduled to run at a future time
+    pub scheduled: Vec<JobMetadata>,
+    /// Jobs that have been explicitly canceled
+    pub canceled: Vec<JobMetadata>,
+    /// Jobs that are ready to be harvested; completed but not post-processed
+    pub harvestable: Vec<JobMetadata>,
 }

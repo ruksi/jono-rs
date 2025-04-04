@@ -26,12 +26,22 @@ fn test_get_current_jobs() -> Result<()> {
     let now = current_timestamp_ms();
 
     let queued_job_id = generate_job_id();
+    let queued_key = keys.job_metadata_hash(&queued_job_id);
     let priority = 0;
     redis::cmd("ZADD")
         .arg(keys.queued_set())
         .arg(priority)
         .arg(&queued_job_id)
         .query::<()>(&mut conn)?;
+    let _: () = redis::pipe()
+        .hset(&queued_key, "id", &queued_job_id)
+        .hset(&queued_key, "payload", "{}")
+        .hset(&queued_key, "max_attempts", "1")
+        .hset(&queued_key, "initial_priority", "0")
+        .hset(&queued_key, "created_at", now.to_string())
+        .hset(&queued_key, "attempt_history", "[]")
+        .hset(&queued_key, "outcome", "null")
+        .query(&mut conn)?;
 
     let running_job_id = generate_job_id();
     let running_expiry = now + 10000;
@@ -64,23 +74,31 @@ fn test_get_current_jobs() -> Result<()> {
         .arg(&harvestable_job_id)
         .query::<()>(&mut conn)?;
 
-    let current_jobs = inspector.get_current_jobs()?;
+    let job_ids = inspector.get_status_to_job_ids(JobFilter::default())?;
+    let job_metadatas = inspector.get_status_to_job_metadata(JobFilter::default())?;
 
     // do the cleaning before asserts _just in case_
     #[rustfmt::skip]
     redis::pipe()
         .cmd("DEL").arg(keys.queued_set()).ignore()
+        .cmd("DEL").arg(queued_key).ignore()
         .cmd("DEL").arg(keys.running_set()).ignore()
         .cmd("DEL").arg(keys.scheduled_set()).ignore()
         .cmd("DEL").arg(keys.canceled_set()).ignore()
         .cmd("DEL").arg(keys.harvestable_set()).ignore()
         .query::<()>(&mut conn)?;
 
-    assert_eq!(current_jobs.queued, vec![queued_job_id]);
-    assert_eq!(current_jobs.running, vec![running_job_id]);
-    assert_eq!(current_jobs.scheduled, vec![scheduled_job_id]);
-    assert_eq!(current_jobs.canceled, vec![canceled_job_id]);
-    assert_eq!(current_jobs.harvestable, vec![harvestable_job_id]);
+    assert_eq!(job_ids.queued, vec![queued_job_id]);
+    assert_eq!(job_ids.running, vec![running_job_id]);
+    assert_eq!(job_ids.scheduled, vec![scheduled_job_id]);
+    assert_eq!(job_ids.canceled, vec![canceled_job_id]);
+    assert_eq!(job_ids.harvestable, vec![harvestable_job_id]);
+
+    assert_eq!(job_metadatas.queued.len(), 1);
+    assert_eq!(job_metadatas.running.len(), 0);
+    assert_eq!(job_metadatas.scheduled.len(), 0);
+    assert_eq!(job_metadatas.canceled.len(), 0);
+    assert_eq!(job_metadatas.harvestable.len(), 0);
 
     Ok(())
 }

@@ -16,11 +16,12 @@ pub use context::Context;
 pub use error::{JonoError, Result};
 pub use forum::Forum;
 pub use inspector::Inspector;
+pub use inspector::JobFilter;
 pub use job_metadata::JobMetadata;
 pub use job_status::JobStatus;
 pub use keys::Keys;
 pub use util::{current_timestamp_ms, generate_job_id, get_redis_url};
 
 pub mod prelude {
-    pub use crate::{Context, Forum, Inspector, JobMetadata, JobStatus, JonoError};
+    pub use crate::{Context, Forum, Inspector, JobFilter, JobMetadata, JobStatus, JonoError};
 }

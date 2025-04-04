@@ -33,7 +33,7 @@ fn test_basics() -> Result<()> {
 
     let metadata = inspector.get_job_metadata(&job_id)?;
     assert_eq!(metadata.outcome.unwrap(), json!({"processed": true}));
-    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Completed);
+    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Harvestable);
 
     producer.clean_job(&job_id)?;
     Ok(())
