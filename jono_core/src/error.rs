@@ -36,3 +36,15 @@ impl std::fmt::Display for JonoError {
         }
     }
 }
+
+impl std::error::Error for JonoError {
+    fn source(&self) -> Option<&(dyn std::error::Error + 'static)> {
+        match self {
+            JonoError::Redis(err) => Some(err),
+            JonoError::Serialization(err) => Some(err),
+            JonoError::JobNotFound(_) => None,
+            JonoError::InvalidJob(_) => None,
+            JonoError::TooManyConsecutiveErrors(_) => None,
+        }
+    }
+}
