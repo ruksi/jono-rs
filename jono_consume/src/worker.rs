@@ -1,8 +1,9 @@
 use jono_core::{JobMetadata, Result};
 use serde_json::Value;
+use std::future::Future;
 
 pub trait Worker: Send + Sync {
-    fn process(&self, job: &Workload) -> Result<Outcome>;
+    fn process<'a>(&'a self, job: &'a Workload) -> impl Future<Output = Result<Outcome>> + Send + 'a;
 }
 
 pub struct Workload {

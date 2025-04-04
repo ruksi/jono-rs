@@ -24,7 +24,9 @@ tls-rustls-webpki = ["deadpool-redis/tls-rustls-webpki-roots", "redis/tls-rustls
 
 [dependencies]
 deadpool-redis.workspace = true
-redis.workspace = true
+redis = { workspace = true, features = ["tokio-comp"] }
 serde.workspace = true
 serde_json.workspace = true
 ulid.workspace = true
+futures = "0.3"
+tokio = { version = "1", features = ["rt", "time"] }

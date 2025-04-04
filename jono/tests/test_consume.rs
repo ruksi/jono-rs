@@ -10,13 +10,13 @@ use serde_json::json;
 struct NoopWorker;
 
 impl Worker for NoopWorker {
-    fn process(&self, _: &Workload) -> Result<Outcome> {
+    async fn process(&self, _: &Workload) -> Result<Outcome> {
         Ok(Outcome::Success(Some(json!({"processed": true}))))
     }
 }
 
-#[test]
-fn test_basics() -> Result<()> {
+#[tokio::test]
+async fn test_basics() -> Result<()> {
     let context = create_test_context("test_consume");
     let inspector = Inspector::with_context(context.clone());
     let producer = Producer::with_context(context.clone());
@@ -26,7 +26,7 @@ fn test_basics() -> Result<()> {
     assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
-    let outcome = consumer.run_next()?;
+    let outcome = consumer.run_next().await?;
     let Some(Outcome::Success(_)) = outcome else {
         panic!("Expected job to succeed but got {:?}", outcome);
     };
@@ -39,8 +39,8 @@ fn test_basics() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_with_config() -> Result<()> {
+#[tokio::test]
+async fn test_with_config() -> Result<()> {
     use std::time::Duration;
 
     let context = create_test_context("test_config");
@@ -55,7 +55,7 @@ fn test_with_config() -> Result<()> {
             .heartbeat_interval(Duration::from_secs(2)),
     );
 
-    let outcome = consumer.run_next()?.unwrap();
+    let outcome = consumer.run_next().await?.unwrap();
     let Outcome::Success(_) = outcome else {
         panic!("Expected job to succeed");
     };
@@ -64,10 +64,10 @@ fn test_with_config() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_nonexistent_job() -> Result<()> {
+#[tokio::test]
+async fn test_nonexistent_job() -> Result<()> {
     let context = create_test_context("test_consume");
     let consumer = Consumer::with_context(context, NoopWorker);
-    assert!(consumer.run_next().is_ok_and(|v| v.is_none()));
+    assert!(consumer.run_next().await.is_ok_and(|v| v.is_none()));
     Ok(())
 }

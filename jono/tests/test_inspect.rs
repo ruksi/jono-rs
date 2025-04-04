@@ -6,8 +6,8 @@ use jono::prelude::*;
 use jono_core::generate_job_id;
 use jono_core::{Result, current_timestamp_ms};
 
-#[test]
-fn test_job_not_found_for_metadata() {
+#[tokio::test]
+async fn test_job_not_found_for_metadata() {
     let context = create_test_context("test_not_found");
     let inspector = Inspector::with_context(context);
     let unknown_job_id = generate_job_id();
@@ -17,8 +17,8 @@ fn test_job_not_found_for_metadata() {
     ));
 }
 
-#[test]
-fn test_get_current_jobs() -> Result<()> {
+#[tokio::test]
+async fn test_get_current_jobs() -> Result<()> {
     let context = create_test_context("test_sorted_sets");
     let inspector = Inspector::with_context(context.clone());
 

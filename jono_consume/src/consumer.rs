@@ -26,11 +26,11 @@ impl<W: Worker> Consumer<W> {
         self
     }
 
-    pub fn run(&self) -> Result<()> {
+    pub async fn run(&self) -> Result<()> {
         let mut consecutive_errors = 0;
 
         loop {
-            match self.run_next() {
+            match self.run_next().await {
                 Ok(Some(_)) => {
                     consecutive_errors = 0;
                 }
@@ -50,10 +50,10 @@ impl<W: Worker> Consumer<W> {
         }
     }
 
-    pub fn run_next(&self) -> Result<Option<Outcome>> {
+    pub async fn run_next(&self) -> Result<Option<Outcome>> {
         match self.acquire_next_job()? {
             Some(metadata) => {
-                let outcome = self.process_job(metadata)?;
+                let outcome = self.process_job(metadata).await?;
                 Ok(Some(outcome))
             }
             None => Ok(None),
@@ -93,7 +93,7 @@ impl<W: Worker> Consumer<W> {
         Ok(())
     }
 
-    fn process_job(&self, workload: Workload) -> Result<Outcome> {
+    async fn process_job(&self, workload: Workload) -> Result<Outcome> {
         let inspector = Inspector::with_context(self.context.clone());
         if !inspector.job_exists(&workload.job_id)? {
             return Ok(Outcome::Failure("Job no longer exists".to_string()));
@@ -102,7 +102,7 @@ impl<W: Worker> Consumer<W> {
             return Ok(Outcome::Failure("Job was canceled".to_string()));
         }
 
-        let outcome = self.worker.process(&workload)?;
+        let outcome = self.worker.process(&workload).await?;
 
         match &outcome {
             Outcome::Success(outcome_data) => {

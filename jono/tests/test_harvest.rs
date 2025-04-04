@@ -10,13 +10,13 @@ use serde_json::json;
 struct NoopWorker;
 
 impl Worker for NoopWorker {
-    fn process(&self, _: &Workload) -> Result<Outcome> {
+    async fn process(&self, _: &Workload) -> Result<Outcome> {
         Ok(Outcome::Success(Some(json!({"processed": true}))))
     }
 }
 
-#[test]
-fn test_basics() -> Result<()> {
+#[tokio::test]
+async fn test_basics() -> Result<()> {
     let context = create_test_context("test_harvest");
     let inspector = Inspector::with_context(context.clone());
     let producer = Producer::with_context(context.clone());
@@ -32,7 +32,7 @@ fn test_basics() -> Result<()> {
     assert_eq!(harvester.harvest(1)?.len(), 0);
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
-    let outcome = consumer.run_next()?;
+    let outcome = consumer.run_next().await?;
     assert!(matches!(outcome, Some(Outcome::Success(_))));
 
     // it shouldn't be expired, yet
@@ -54,8 +54,8 @@ fn test_basics() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_nonexistent() -> Result<()> {
+#[tokio::test]
+async fn test_nonexistent() -> Result<()> {
     let context = create_test_context("test_nothing_to_harvest");
     let harvester = Harvester::with_context(context.clone());
     assert_eq!(harvester.harvest(0)?.len(), 0);
@@ -64,8 +64,8 @@ fn test_nonexistent() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_clean_harvest() -> Result<()> {
+#[tokio::test]
+async fn test_clean_harvest() -> Result<()> {
     let context = create_test_context("test_clean_harvest");
     let producer = Producer::with_context(context.clone());
     let harvester = Harvester::with_context(context.clone());
@@ -75,7 +75,7 @@ fn test_clean_harvest() -> Result<()> {
         .submit(&producer)?;
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
-    let outcome = consumer.run_next()?;
+    let outcome = consumer.run_next().await?;
     assert!(matches!(outcome, Some(Outcome::Success(_))));
 
     // if the job is cleaned, it can't be harvested even once

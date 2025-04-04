@@ -7,8 +7,8 @@ use jono::prelude::*;
 use jono_core::{Result, current_timestamp_ms, generate_job_id};
 use serde_json::json;
 
-#[test]
-fn test_submit_job() -> Result<()> {
+#[tokio::test]
+async fn test_submit_job() -> Result<()> {
     let context = create_test_context("test_submit");
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
@@ -25,8 +25,8 @@ fn test_submit_job() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_submit_scheduled_job() -> Result<()> {
+#[tokio::test]
+async fn test_submit_scheduled_job() -> Result<()> {
     let context = create_test_context("test_schedule");
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
@@ -46,8 +46,8 @@ fn test_submit_scheduled_job() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_cancel_job() -> Result<()> {
+#[tokio::test]
+async fn test_cancel_job() -> Result<()> {
     let context = create_test_context("test_cancel");
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
@@ -66,8 +66,8 @@ fn test_cancel_job() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_clean_job() -> Result<()> {
+#[tokio::test]
+async fn test_clean_job() -> Result<()> {
     let context = create_test_context("test_clean");
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
@@ -98,8 +98,8 @@ fn test_clean_job() -> Result<()> {
     Ok(())
 }
 
-#[test]
-fn test_job_not_found_for_cancel() {
+#[tokio::test]
+async fn test_job_not_found_for_cancel() {
     let context = create_test_context("test_not_found");
     let producer = Producer::with_context(context.clone());
     let unknown_job_id = generate_job_id();
