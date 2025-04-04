@@ -9,10 +9,58 @@ repository.workspace = true
 version.workspace = true
 
 [features]
-default = ["produce", "consume", "harvest"]
+default = ["produce", "consume", "harvest", "runtime-tokio", "tls-none"]
+
+# Jono feature sets
 produce = ["dep:jono_produce"]
-consume = ["dep:jono_consume"]
+consume = ["dep:jono_consume"] 
 harvest = ["dep:jono_harvest"]
+
+# Runtime, choose one
+runtime-tokio = [
+    "jono_core/runtime-tokio",
+    "jono_produce?/runtime-tokio",
+    "jono_consume?/runtime-tokio",
+    "jono_harvest?/runtime-tokio"
+]
+runtime-async-std = [
+    "jono_core/runtime-async-std",
+    "jono_produce?/runtime-async-std",
+    "jono_consume?/runtime-async-std",
+    "jono_harvest?/runtime-async-std"
+]
+
+# TLS implementation, choose one
+tls-none = [
+    "jono_core/tls-none",
+    "jono_produce?/tls-none",
+    "jono_consume?/tls-none",
+    "jono_harvest?/tls-none"
+]
+tls-native = [
+    "jono_core/tls-native",
+    "jono_produce?/tls-native",
+    "jono_consume?/tls-native",
+    "jono_harvest?/tls-native"
+]
+tls-rustls = [
+    "jono_core/tls-rustls",
+    "jono_produce?/tls-rustls",
+    "jono_consume?/tls-rustls",
+    "jono_harvest?/tls-rustls"
+]
+tls-rustls-insecure = [
+    "jono_core/tls-rustls-insecure",
+    "jono_produce?/tls-rustls-insecure",
+    "jono_consume?/tls-rustls-insecure",
+    "jono_harvest?/tls-rustls-insecure"
+]
+tls-rustls-webpki = [
+    "jono_core/tls-rustls-webpki",
+    "jono_produce?/tls-rustls-webpki",
+    "jono_consume?/tls-rustls-webpki",
+    "jono_harvest?/tls-rustls-webpki"
+]
 
 [dependencies]
 jono_core = { path = "../jono_core", version = "=0.1.6-rc.6" }

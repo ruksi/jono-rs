@@ -8,6 +8,20 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[features]
+default = ["runtime-tokio", "tls-none"]
+
+# Runtime, choose one
+runtime-tokio = ["jono_core/runtime-tokio"]
+runtime-async-std = ["jono_core/runtime-async-std"]
+
+# TLS implementation, choose one
+tls-none = ["jono_core/tls-none"]
+tls-native = ["jono_core/tls-native"]
+tls-rustls = ["jono_core/tls-rustls"]
+tls-rustls-insecure = ["jono_core/tls-rustls-insecure"]
+tls-rustls-webpki = ["jono_core/tls-rustls-webpki"]
+
 [dependencies]
 jono_core = { path = "../jono_core", version = "=0.1.6-rc.6" }
 redis.workspace = true

@@ -8,7 +8,22 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[features]
+default = ["runtime-tokio", "tls-none"]
+
+# Runtime, choose one
+runtime-tokio = ["deadpool-redis/rt_tokio_1", "redis/tokio-comp"]
+runtime-async-std = ["deadpool-redis/rt_async-std_1", "redis/async-std-comp"]
+
+# TLS implementation, choose one
+tls-none = []
+tls-native = ["deadpool-redis/tls-native-tls", "redis/tls-native-tls"]
+tls-rustls = ["deadpool-redis/tls-rustls", "redis/tls-rustls",]
+tls-rustls-insecure = ["deadpool-redis/tls-rustls-insecure", "redis/tls-rustls-insecure"]
+tls-rustls-webpki = ["deadpool-redis/tls-rustls-webpki-roots", "redis/tls-rustls-webpki-roots"]
+
 [dependencies]
+deadpool-redis.workspace = true
 redis.workspace = true
 serde.workspace = true
 serde_json.workspace = true
