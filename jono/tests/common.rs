@@ -12,6 +12,7 @@ pub struct JobFixture {
 }
 
 impl JobFixture {
+    #[allow(dead_code)]
     pub fn new(context: Context, status: JobStatus, score: i64) -> jono_core::Result<Self> {
         let keys = context.keys();
         let now = current_timestamp_ms();
