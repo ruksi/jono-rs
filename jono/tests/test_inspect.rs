@@ -8,7 +8,7 @@ use jono_core::{Result, current_timestamp_ms};
 
 #[tokio::test]
 async fn test_job_not_found_for_metadata() {
-    let context = create_test_context("test_not_found");
+    let context = create_test_context();
     let inspector = Inspector::with_context(context);
     let unknown_job_id = generate_job_id();
     assert!(matches!(
@@ -23,7 +23,7 @@ async fn test_job_not_found_for_metadata() {
 
 #[tokio::test]
 async fn test_job_maps_on_all() -> Result<()> {
-    let context = create_test_context("test_maps_on_all");
+    let context = create_test_context();
     let inspector = Inspector::with_context(context.clone());
 
     let now = current_timestamp_ms();
@@ -57,7 +57,7 @@ async fn test_job_maps_on_all() -> Result<()> {
 
 #[tokio::test]
 async fn test_job_maps_on_queued() -> Result<()> {
-    let context = create_test_context("test_maps_on_queued");
+    let context = create_test_context();
     let inspector = Inspector::with_context(context.clone());
 
     let queue_fix = JobFixture::new(context.clone(), JobStatus::Queued, 0).await?;
@@ -86,7 +86,7 @@ async fn test_job_maps_on_queued() -> Result<()> {
 
 #[tokio::test]
 async fn test_job_maps_on_running() -> Result<()> {
-    let context = create_test_context("test_maps_on_running");
+    let context = create_test_context();
     let inspector = Inspector::with_context(context.clone());
 
     let now = current_timestamp_ms();
@@ -116,7 +116,7 @@ async fn test_job_maps_on_running() -> Result<()> {
 
 #[tokio::test]
 async fn test_job_maps_on_scheduled() -> Result<()> {
-    let context = create_test_context("test_maps_on_scheduled");
+    let context = create_test_context();
     let inspector = Inspector::with_context(context.clone());
 
     let now = current_timestamp_ms();
@@ -146,7 +146,7 @@ async fn test_job_maps_on_scheduled() -> Result<()> {
 
 #[tokio::test]
 async fn test_job_maps_on_canceled() -> Result<()> {
-    let context = create_test_context("test_maps_on_canceled");
+    let context = create_test_context();
     let inspector = Inspector::with_context(context.clone());
 
     let now = current_timestamp_ms();
@@ -176,7 +176,7 @@ async fn test_job_maps_on_canceled() -> Result<()> {
 
 #[tokio::test]
 async fn test_job_maps_on_harvestable() -> Result<()> {
-    let context = create_test_context("test_maps_on_harvestable");
+    let context = create_test_context();
     let inspector = Inspector::with_context(context.clone());
 
     let now = current_timestamp_ms();

@@ -17,7 +17,7 @@ impl Worker for NoopWorker {
 
 #[tokio::test]
 async fn test_basics() -> Result<()> {
-    let context = create_test_context("test_harvest");
+    let context = create_test_context();
     let inspector = Inspector::with_context(context.clone());
     let producer = Producer::with_context(context.clone());
     let harvester = Harvester::with_context(context.clone());
@@ -57,7 +57,7 @@ async fn test_basics() -> Result<()> {
 
 #[tokio::test]
 async fn test_nonexistent() -> Result<()> {
-    let context = create_test_context("test_nothing_to_harvest");
+    let context = create_test_context();
     let harvester = Harvester::with_context(context.clone());
     assert_eq!(harvester.harvest(0).await?.len(), 0);
     assert_eq!(harvester.harvest(1).await?.len(), 0);
@@ -67,7 +67,7 @@ async fn test_nonexistent() -> Result<()> {
 
 #[tokio::test]
 async fn test_clean_harvest() -> Result<()> {
-    let context = create_test_context("test_clean_harvest");
+    let context = create_test_context();
     let producer = Producer::with_context(context.clone());
     let harvester = Harvester::with_context(context.clone());
 

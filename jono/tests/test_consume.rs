@@ -17,7 +17,7 @@ impl Worker for NoopWorker {
 
 #[tokio::test]
 async fn test_basics() -> Result<()> {
-    let context = create_test_context("test_consume");
+    let context = create_test_context();
     let inspector = Inspector::with_context(context.clone());
     let producer = Producer::with_context(context.clone());
     let job_id = JobPlan::new()
@@ -47,7 +47,7 @@ async fn test_basics() -> Result<()> {
 async fn test_with_config() -> Result<()> {
     use std::time::Duration;
 
-    let context = create_test_context("test_config");
+    let context = create_test_context();
     let producer = Producer::with_context(context.clone());
     let job_id = JobPlan::new()
         .payload(json!({"action": "configured_action"}))
@@ -71,7 +71,7 @@ async fn test_with_config() -> Result<()> {
 
 #[tokio::test]
 async fn test_nonexistent_job() -> Result<()> {
-    let context = create_test_context("test_consume");
+    let context = create_test_context();
     let consumer = Consumer::with_context(context, NoopWorker);
     assert!(consumer.run_next().await.is_ok_and(|v| v.is_none()));
     Ok(())

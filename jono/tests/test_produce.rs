@@ -9,7 +9,7 @@ use serde_json::json;
 
 #[tokio::test]
 async fn test_submit_job() -> Result<()> {
-    let context = create_test_context("test_submit");
+    let context = create_test_context();
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
 
@@ -28,7 +28,7 @@ async fn test_submit_job() -> Result<()> {
 
 #[tokio::test]
 async fn test_submit_scheduled_job() -> Result<()> {
-    let context = create_test_context("test_schedule");
+    let context = create_test_context();
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
 
@@ -53,7 +53,7 @@ async fn test_submit_scheduled_job() -> Result<()> {
 
 #[tokio::test]
 async fn test_cancel_job() -> Result<()> {
-    let context = create_test_context("test_cancel");
+    let context = create_test_context();
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
 
@@ -77,7 +77,7 @@ async fn test_cancel_job() -> Result<()> {
 
 #[tokio::test]
 async fn test_clean_job() -> Result<()> {
-    let context = create_test_context("test_clean");
+    let context = create_test_context();
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
 
@@ -110,7 +110,7 @@ async fn test_clean_job() -> Result<()> {
 
 #[tokio::test]
 async fn test_job_not_found_for_cancel() {
-    let context = create_test_context("test_not_found");
+    let context = create_test_context();
     let producer = Producer::with_context(context.clone());
     let unknown_job_id = generate_job_id();
     assert!(matches!(

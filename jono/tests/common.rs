@@ -1,9 +1,11 @@
 use jono_core::{Context, Forum, JobStatus, JonoError, current_timestamp_ms, generate_job_id};
 
-pub fn create_test_context(topic: impl ToString) -> Context {
+pub fn create_test_context() -> Context {
+    // job id is random enough for now 🤷
+    let random_topic = format!("test_ctx_{}", generate_job_id());
     Forum::new("redis://localhost:6380")
         .expect("Failed to connect to Redis")
-        .topic(topic)
+        .topic(random_topic)
 }
 
 pub struct JobFixture {
