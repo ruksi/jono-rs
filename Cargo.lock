@@ -671,7 +671,7 @@ checksum = "4a5f13b858c8d314ee3e8f639011f7ccefe71f97f96e50151fb991f267928e2c"
 
 [[package]]
 name = "jono"
-version = "0.1.6-rc.6"
+version = "0.1.6-rc.7"
 dependencies = [
  "jono_consume",
  "jono_core",
@@ -685,7 +685,7 @@ dependencies = [
 
 [[package]]
 name = "jono_consume"
-version = "0.1.6-rc.6"
+version = "0.1.6-rc.7"
 dependencies = [
  "jono_core",
  "redis",
@@ -695,7 +695,7 @@ dependencies = [
 
 [[package]]
 name = "jono_core"
-version = "0.1.6-rc.6"
+version = "0.1.6-rc.7"
 dependencies = [
  "deadpool-redis",
  "redis",
@@ -706,7 +706,7 @@ dependencies = [
 
 [[package]]
 name = "jono_harvest"
-version = "0.1.6-rc.6"
+version = "0.1.6-rc.7"
 dependencies = [
  "jono_core",
  "redis",
@@ -714,7 +714,7 @@ dependencies = [
 
 [[package]]
 name = "jono_produce"
-version = "0.1.6-rc.6"
+version = "0.1.6-rc.7"
 dependencies = [
  "jono_core",
  "redis",
