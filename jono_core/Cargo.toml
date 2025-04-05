@@ -23,8 +23,8 @@ tls-rustls-insecure = ["deadpool-redis/tls-rustls-insecure", "redis/tls-rustls-i
 tls-rustls-webpki = ["deadpool-redis/tls-rustls-webpki-roots", "redis/tls-rustls-webpki-roots"]
 
 [dependencies]
-redis = { workspace = true, features = ["tokio-comp"] }
 deadpool-redis.workspace = true
+redis.workspace = true
 serde.workspace = true
 serde_json.workspace = true
 ulid.workspace = true

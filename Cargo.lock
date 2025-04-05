@@ -710,9 +710,6 @@ version = "0.1.6-rc.6"
 dependencies = [
  "jono_core",
  "redis",
- "serde",
- "serde_json",
- "tracing",
 ]
 
 [[package]]

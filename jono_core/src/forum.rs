@@ -10,11 +10,21 @@ pub struct Forum {
 impl Forum {
     /// Create a forum with the specified Redis URL
     pub fn new(redis_url: &str) -> Result<Self> {
+        #[cfg(feature = "runtime-async-std")]
+        let runtime = Some(Runtime::AsyncStd1);
+
         #[cfg(feature = "runtime-tokio")]
         let runtime = Some(Runtime::Tokio1);
 
-        #[cfg(feature = "runtime-async-std")]
-        let runtime = Some(Runtime::AsyncStd1);
+        #[cfg(not(any(feature = "runtime-tokio", feature = "runtime-async-std")))]
+        compile_error!(
+            "Please enable either the 'runtime-tokio' or 'runtime-async-std' feature in your Cargo.toml"
+        );
+
+        #[cfg(all(feature = "runtime-async-std", feature = "runtime-tokio"))]
+        compile_error!(
+            "Please enable only one of the 'runtime-tokio' or 'runtime-async-std' features in your Cargo.toml"
+        );
 
         let pool = Config::from_url(redis_url).create_pool(runtime)?;
 

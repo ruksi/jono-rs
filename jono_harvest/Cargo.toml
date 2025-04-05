@@ -23,8 +23,5 @@ tls-rustls-insecure = ["jono_core/tls-rustls-insecure"]
 tls-rustls-webpki = ["jono_core/tls-rustls-webpki"]
 
 [dependencies]
-jono_core = { path = "../jono_core", version = "=0.1.6-rc.6" }
+jono_core = { path = "../jono_core", version = "=0.1.6-rc.6", default-features = false }
 redis.workspace = true
-serde.workspace = true
-serde_json.workspace = true
-tracing.workspace = true
