@@ -22,8 +22,9 @@ async fn test_basics() -> Result<()> {
     let producer = Producer::with_context(context.clone());
     let job_id = JobPlan::new()
         .payload(json!({"action": "test_action"}))
-        .submit(&producer)?;
-    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
+        .submit(&producer)
+        .await?;
+    assert_eq!(inspector.get_job_status(&job_id).await?, JobStatus::Queued);
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
     let outcome = consumer.run_next().await?;
@@ -31,11 +32,14 @@ async fn test_basics() -> Result<()> {
         panic!("Expected job to succeed but got {:?}", outcome);
     };
 
-    let metadata = inspector.get_job_metadata(&job_id)?;
+    let metadata = inspector.get_job_metadata(&job_id).await?;
     assert_eq!(metadata.outcome.unwrap(), json!({"processed": true}));
-    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Harvestable);
+    assert_eq!(
+        inspector.get_job_status(&job_id).await?,
+        JobStatus::Harvestable
+    );
 
-    producer.clean_job(&job_id)?;
+    producer.clean_job(&job_id).await?;
     Ok(())
 }
 
@@ -47,7 +51,8 @@ async fn test_with_config() -> Result<()> {
     let producer = Producer::with_context(context.clone());
     let job_id = JobPlan::new()
         .payload(json!({"action": "configured_action"}))
-        .submit(&producer)?;
+        .submit(&producer)
+        .await?;
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker).with_config(
         ConsumerConfig::new()
@@ -60,7 +65,7 @@ async fn test_with_config() -> Result<()> {
         panic!("Expected job to succeed");
     };
 
-    producer.clean_job(&job_id)?;
+    producer.clean_job(&job_id).await?;
     Ok(())
 }
 

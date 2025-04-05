@@ -1,5 +1,4 @@
-use crate::{Forum, JonoError, Keys, Result};
-use redis::Connection;
+use crate::{Forum, Keys, Result};
 
 /// Topic-specific context for Jono operations
 #[derive(Clone)]
@@ -20,11 +19,8 @@ impl Context {
     }
 
     /// Get a Redis connection from the forum
-    pub fn get_connection(&self) -> Result<Connection> {
-        self.forum
-            .redis_client()
-            .get_connection()
-            .map_err(JonoError::Redis)
+    pub async fn get_connection(&self) -> Result<impl redis::aio::ConnectionLike> {
+        Ok(self.forum.redis_pool().get().await?)
     }
 
     /// Get the topic name
@@ -35,6 +31,11 @@ impl Context {
     /// Get the Redis keys for this topic
     pub fn keys(&self) -> &Keys {
         &self.keys
+    }
+    
+    /// Get the forum for this context
+    pub fn forum(&self) -> &Forum {
+        &self.forum
     }
 
     /// Create a new context for a different topic using the same forum

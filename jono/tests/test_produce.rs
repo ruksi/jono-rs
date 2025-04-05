@@ -15,13 +15,14 @@ async fn test_submit_job() -> Result<()> {
 
     let job_id = JobPlan::new()
         .payload(json!({"one": 1, "two": 2}))
-        .submit(&producer)?;
+        .submit(&producer)
+        .await?;
 
-    let metadata = inspector.get_job_metadata(&job_id)?;
+    let metadata = inspector.get_job_metadata(&job_id).await?;
     assert_eq!(metadata.payload, json!({"one": 1, "two": 2}));
-    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
+    assert_eq!(inspector.get_job_status(&job_id).await?, JobStatus::Queued);
 
-    producer.clean_job(&job_id)?;
+    producer.clean_job(&job_id).await?;
     Ok(())
 }
 
@@ -36,13 +37,17 @@ async fn test_submit_scheduled_job() -> Result<()> {
     let job_id = JobPlan::new()
         .payload(payload)
         .scheduled_for(future_time)
-        .submit(&producer)?;
+        .submit(&producer)
+        .await?;
 
-    assert!(inspector.job_exists(&job_id)?);
-    inspector.get_job_metadata(&job_id)?;
-    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Scheduled);
+    assert!(inspector.job_exists(&job_id).await?);
+    inspector.get_job_metadata(&job_id).await?;
+    assert_eq!(
+        inspector.get_job_status(&job_id).await?,
+        JobStatus::Scheduled
+    );
 
-    producer.clean_job(&job_id)?;
+    producer.clean_job(&job_id).await?;
     Ok(())
 }
 
@@ -54,15 +59,19 @@ async fn test_cancel_job() -> Result<()> {
 
     let job_id = JobPlan::new()
         .payload(json!({ "action": "cancel this soon!" }))
-        .submit(&producer)?;
+        .submit(&producer)
+        .await?;
 
-    assert!(producer.cancel_job(&job_id, 0).is_ok());
+    assert!(producer.cancel_job(&job_id, 0).await.is_ok());
 
-    assert!(inspector.job_exists(&job_id)?);
-    inspector.get_job_metadata(&job_id)?;
-    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Canceled);
+    assert!(inspector.job_exists(&job_id).await?);
+    inspector.get_job_metadata(&job_id).await?;
+    assert_eq!(
+        inspector.get_job_status(&job_id).await?,
+        JobStatus::Canceled
+    );
 
-    producer.clean_job(&job_id)?;
+    producer.clean_job(&job_id).await?;
     Ok(())
 }
 
@@ -74,24 +83,25 @@ async fn test_clean_job() -> Result<()> {
 
     let job_id = JobPlan::new()
         .payload(json!({ "action": "clean this soon!" }))
-        .submit(&producer)?;
+        .submit(&producer)
+        .await?;
 
     // before clean
-    assert!(inspector.job_exists(&job_id)?);
-    assert!(inspector.get_job_metadata(&job_id).is_ok());
-    assert_eq!(inspector.get_job_status(&job_id)?, JobStatus::Queued);
+    assert!(inspector.job_exists(&job_id).await?);
+    assert!(inspector.get_job_metadata(&job_id).await.is_ok());
+    assert_eq!(inspector.get_job_status(&job_id).await?, JobStatus::Queued);
 
     // clean
-    assert!(producer.clean_job(&job_id)?);
+    assert!(producer.clean_job(&job_id).await?);
 
     // after clean
-    assert!(!inspector.job_exists(&job_id)?);
+    assert!(!inspector.job_exists(&job_id).await?);
     assert!(matches!(
-        inspector.get_job_metadata(&job_id).err().unwrap(),
+        inspector.get_job_metadata(&job_id).await.err().unwrap(),
         JonoError::JobNotFound(_)
     ));
     assert!(matches!(
-        inspector.get_job_status(&job_id).err().unwrap(),
+        inspector.get_job_status(&job_id).await.err().unwrap(),
         JonoError::JobNotFound(_)
     ));
 
@@ -104,7 +114,7 @@ async fn test_job_not_found_for_cancel() {
     let producer = Producer::with_context(context.clone());
     let unknown_job_id = generate_job_id();
     assert!(matches!(
-        producer.cancel_job(&unknown_job_id, 0).err().unwrap(),
+        producer.cancel_job(&unknown_job_id, 0).await.err().unwrap(),
         JonoError::JobNotFound(_)
     ));
 }

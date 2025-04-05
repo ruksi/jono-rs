@@ -13,7 +13,7 @@ pub struct JobFixture {
 
 impl JobFixture {
     #[allow(dead_code)]
-    pub fn new(context: Context, status: JobStatus, score: i64) -> jono_core::Result<Self> {
+    pub async fn new(context: Context, status: JobStatus, score: i64) -> jono_core::Result<Self> {
         let keys = context.keys();
         let now = current_timestamp_ms();
 
@@ -33,7 +33,7 @@ impl JobFixture {
             }
         };
 
-        let mut conn = context.get_connection()?;
+        let mut conn = context.get_connection().await?;
 
         #[rustfmt::skip]
         let _: () = redis::pipe()
@@ -46,14 +46,22 @@ impl JobFixture {
             .hset(&metadata_key, "attempt_history", "[]")
             .hset(&metadata_key, "outcome", "null")
             .hset(&metadata_key, "status", status.to_string())
-            .query(&mut conn)?;
+            .query_async(&mut conn)
+            .await?;
 
-        Ok(Self { job_id, context })
+        let fixture = Self {
+            job_id,
+            context: context.clone(),
+        };
+
+        Ok(fixture)
     }
 
-    fn clean(&self) -> jono_core::Result<()> {
+    fn clean_sync(&self) -> jono_core::Result<()> {
         let keys = self.context.keys();
-        let mut conn = self.context.get_connection()?;
+
+        let client = redis::Client::open(self.context.forum().redis_url())?;
+        let mut conn = client.get_connection()?;
 
         #[rustfmt::skip]
         let _: () = redis::pipe()
@@ -71,8 +79,8 @@ impl JobFixture {
 
 impl Drop for JobFixture {
     fn drop(&mut self) {
-        if let Err(e) = self.clean() {
-            eprintln!("Failed to clean up job fixture: {}", e);
+        if let Err(err) = self.clean_sync() {
+            eprintln!("Error during cleanup: {:?}", err);
         }
     }
 }

@@ -12,7 +12,7 @@ async fn test_job_not_found_for_metadata() {
     let inspector = Inspector::with_context(context);
     let unknown_job_id = generate_job_id();
     assert!(matches!(
-        inspector.get_job_metadata(&unknown_job_id).err().unwrap(),
+        inspector.get_job_metadata(&unknown_job_id).await.err().unwrap(),
         JonoError::JobNotFound(_)
     ));
 }
@@ -23,14 +23,14 @@ async fn test_get_current_jobs() -> Result<()> {
     let inspector = Inspector::with_context(context.clone());
 
     let now = current_timestamp_ms();
-    let queue_fix = JobFixture::new(context.clone(), JobStatus::Queued, 0)?;
-    let run_fix = JobFixture::new(context.clone(), JobStatus::Running, now + 10000)?;
-    let schedule_fix = JobFixture::new(context.clone(), JobStatus::Scheduled, now + 60000)?;
-    let cancel_fix = JobFixture::new(context.clone(), JobStatus::Canceled, now + 30000)?;
-    let harvest_fix = JobFixture::new(context.clone(), JobStatus::Harvestable, now)?;
+    let queue_fix = JobFixture::new(context.clone(), JobStatus::Queued, 0).await?;
+    let run_fix = JobFixture::new(context.clone(), JobStatus::Running, now + 10000).await?;
+    let schedule_fix = JobFixture::new(context.clone(), JobStatus::Scheduled, now + 60000).await?;
+    let cancel_fix = JobFixture::new(context.clone(), JobStatus::Canceled, now + 30000).await?;
+    let harvest_fix = JobFixture::new(context.clone(), JobStatus::Harvestable, now).await?;
 
-    let job_ids = inspector.get_status_to_job_ids(JobFilter::default())?;
-    let job_metadatas = inspector.get_status_to_job_metadata(JobFilter::default())?;
+    let job_ids = inspector.get_status_to_job_ids(JobFilter::default()).await?;
+    let job_metadatas = inspector.get_status_to_job_metadata(JobFilter::default()).await?;
 
     assert_eq!(job_ids.queued, vec![queue_fix.job_id.clone()]);
     assert_eq!(job_ids.running, vec![run_fix.job_id.clone()]);

@@ -1,7 +1,7 @@
 use crate::consumer_config::ConsumerConfig;
 use crate::{Outcome, Worker, Workload};
 use jono_core::{Context, Inspector, JonoError, Result, current_timestamp_ms};
-use redis::{Commands, Connection};
+use redis::AsyncCommands;
 use serde_json::json;
 use std::thread;
 
@@ -51,7 +51,7 @@ impl<W: Worker> Consumer<W> {
     }
 
     pub async fn run_next(&self) -> Result<Option<Outcome>> {
-        match self.acquire_next_job()? {
+        match self.acquire_next_job().await? {
             Some(metadata) => {
                 let outcome = self.process_job(metadata).await?;
                 Ok(Some(outcome))
@@ -60,25 +60,25 @@ impl<W: Worker> Consumer<W> {
         }
     }
 
-    fn acquire_next_job(&self) -> Result<Option<Workload>> {
-        let mut conn = self.get_connection()?;
+    async fn acquire_next_job(&self) -> Result<Option<Workload>> {
+        let mut conn = self.get_connection().await?;
         let keys = self.context.keys();
 
-        let entries: Vec<(String, i64)> = conn.zpopmin(keys.queued_set(), 1)?;
+        let entries: Vec<(String, i64)> = conn.zpopmin(keys.queued_set(), 1).await?;
 
         if let Some((job_id, _)) = entries.first() {
             let inspector = Inspector::with_context(self.context.clone());
-            let metadata = inspector.get_job_metadata(job_id)?;
+            let metadata = inspector.get_job_metadata(job_id).await?;
             let workload = Workload::from_metadata(metadata);
-            self.mark_job_running(job_id)?;
+            self.mark_job_running(job_id).await?;
             Ok(Some(workload))
         } else {
             Ok(None)
         }
     }
 
-    fn mark_job_running(&self, job_id: &str) -> Result<()> {
-        let mut conn = self.get_connection()?;
+    async fn mark_job_running(&self, job_id: &str) -> Result<()> {
+        let mut conn = self.get_connection().await?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
         let expiry = now + self.config.get_heartbeat_timeout().as_millis() as i64;
@@ -88,17 +88,18 @@ impl<W: Worker> Consumer<W> {
             .zadd(keys.running_set(), job_id, expiry)
             .hset(&metadata_key, "status", "running")
             .hset(&metadata_key, "started_at", now.to_string())
-            .query(&mut conn)?;
+            .query_async(&mut conn)
+            .await?;
 
         Ok(())
     }
 
     async fn process_job(&self, workload: Workload) -> Result<Outcome> {
         let inspector = Inspector::with_context(self.context.clone());
-        if !inspector.job_exists(&workload.job_id)? {
+        if !inspector.job_exists(&workload.job_id).await? {
             return Ok(Outcome::Failure("Job no longer exists".to_string()));
         }
-        if inspector.job_is_canceled(&workload.job_id)? {
+        if inspector.job_is_canceled(&workload.job_id).await? {
             return Ok(Outcome::Failure("Job was canceled".to_string()));
         }
 
@@ -106,7 +107,7 @@ impl<W: Worker> Consumer<W> {
 
         match &outcome {
             Outcome::Success(outcome_data) => {
-                self.complete_job(&workload.job_id, outcome_data.clone())?;
+                self.complete_job(&workload.job_id, outcome_data.clone()).await?;
             }
             Outcome::Failure(error_message) => {
                 eprintln!("Job {} failed: {}", workload.job_id, error_message);
@@ -117,8 +118,8 @@ impl<W: Worker> Consumer<W> {
         Ok(outcome)
     }
 
-    fn complete_job(&self, job_id: &str, outcome: Option<serde_json::Value>) -> Result<()> {
-        let mut conn = self.get_connection()?;
+    async fn complete_job(&self, job_id: &str, outcome: Option<serde_json::Value>) -> Result<()> {
+        let mut conn = self.get_connection().await?;
         let keys = self.context.keys();
 
         let out_data = outcome.unwrap_or(json!(null));
@@ -136,12 +137,13 @@ impl<W: Worker> Consumer<W> {
             .hset(&metadata_key, "completed_at", now.to_string())
             .hset(&metadata_key, "outcome", out_json)
             .expire(&metadata_key, ttl_ms / 1000)
-            .query(&mut conn)?;
+            .query_async(&mut conn)
+            .await?;
 
         Ok(())
     }
 
-    fn get_connection(&self) -> Result<Connection> {
-        self.context.get_connection()
+    async fn get_connection(&self) -> Result<impl redis::aio::ConnectionLike> {
+        self.context.get_connection().await
     }
 }

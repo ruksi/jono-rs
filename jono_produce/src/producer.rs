@@ -1,6 +1,6 @@
 use crate::JobPlan;
 use jono_core::*;
-use redis::{Commands, Connection};
+use redis::AsyncCommands;
 use tracing::info;
 
 /// Interface for submitting jobs to Jono queues
@@ -14,8 +14,8 @@ impl Producer {
     }
 
     /// Submit a new job to the queue
-    pub fn submit_job(&self, job_plan: JobPlan) -> Result<String> {
-        let mut conn = self.get_connection()?;
+    pub async fn submit_job(&self, job_plan: JobPlan) -> Result<String> {
+        let mut conn = self.get_connection().await?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
 
@@ -42,11 +42,14 @@ impl Producer {
             .hset(&metadata_key, "created_at", now.to_string())
             .hset(&metadata_key, "attempt_history", "[]")
             .hset(&metadata_key, "outcome", "null")
-            .query(&mut conn)?;
+            .query_async(&mut conn)
+            .await?;
 
         let scheduled_for = job_plan.get_scheduled_for();
         if scheduled_for > 0 && scheduled_for > now {
-            let _: () = conn.zadd::<_, _, _, ()>(keys.scheduled_set(), &job_id, scheduled_for)?;
+            let _: () = conn
+                .zadd::<_, _, _, ()>(keys.scheduled_set(), &job_id, scheduled_for)
+                .await?;
 
             info!(
                 job_id = %job_id,
@@ -54,8 +57,9 @@ impl Producer {
                 "Job scheduled for later execution"
             );
         } else {
-            let _: () =
-                conn.zadd::<_, _, _, ()>(keys.queued_set(), &job_id, job_plan.get_priority())?;
+            let _: () = conn
+                .zadd::<_, _, _, ()>(keys.queued_set(), &job_id, job_plan.get_priority())
+                .await?;
 
             info!(
                 job_id = %job_id,
@@ -68,13 +72,13 @@ impl Producer {
     }
 
     /// Cancel a job if it hasn't started processing yet
-    pub fn cancel_job(&self, job_id: &str, grace_period_ms: i64) -> Result<bool> {
-        let mut conn = self.get_connection()?;
+    pub async fn cancel_job(&self, job_id: &str, grace_period_ms: i64) -> Result<bool> {
+        let mut conn = self.get_connection().await?;
         let now = current_timestamp_ms();
         let keys = self.context.keys();
         let metadata_key = keys.job_metadata_hash(job_id);
 
-        let exists: bool = conn.exists(metadata_key)?;
+        let exists: bool = conn.exists(metadata_key).await?;
         if !exists {
             return Err(JonoError::JobNotFound(job_id.to_string()));
         }
@@ -85,11 +89,14 @@ impl Producer {
                 .zrem(keys.queued_set(), job_id)
                 .zrem(keys.scheduled_set(), job_id)
                 .zscore(keys.running_set(), job_id)
-                .query(&mut conn)?;
+                .query_async(&mut conn)
+                .await?;
 
         if last_heartbeat.is_some() {
             let grace_end = now + grace_period_ms;
-            let _: () = conn.zadd::<_, _, _, ()>(keys.canceled_set(), job_id, grace_end)?;
+            let _: () = conn
+                .zadd::<_, _, _, ()>(keys.canceled_set(), job_id, grace_end)
+                .await?;
             info!(
                 job_id = %job_id,
                 grace_end = %grace_end,
@@ -99,7 +106,9 @@ impl Producer {
         }
 
         if removed_from_queued > 0 || removed_from_scheduled > 0 {
-            let _: () = conn.zadd::<_, _, _, ()>(keys.canceled_set(), job_id, now)?;
+            let _: () = conn
+                .zadd::<_, _, _, ()>(keys.canceled_set(), job_id, now)
+                .await?;
             info!(job_id = %job_id, "Job canceled successfully");
             return Ok(true);
         }
@@ -108,8 +117,8 @@ impl Producer {
         Ok(false)
     }
 
-    pub fn clean_job(&self, job_id: &str) -> Result<bool> {
-        let mut conn = self.get_connection()?;
+    pub async fn clean_job(&self, job_id: &str) -> Result<bool> {
+        let mut conn = self.get_connection().await?;
         let keys = self.context.keys();
 
         #[rustfmt::skip]
@@ -120,12 +129,13 @@ impl Producer {
             .zrem(keys.canceled_set(), job_id).ignore()
             .zrem(keys.harvestable_set(), job_id).ignore()
             .del(keys.job_metadata_hash(job_id))
-            .query(&mut conn)?;
+            .query_async(&mut conn)
+            .await?;
 
         Ok(metadata_deleted > 0)
     }
 
-    fn get_connection(&self) -> Result<Connection> {
-        self.context.get_connection()
+    async fn get_connection(&self) -> Result<impl redis::aio::ConnectionLike> {
+        self.context.get_connection().await
     }
 }

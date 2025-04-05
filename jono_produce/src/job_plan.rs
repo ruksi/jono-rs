@@ -60,10 +60,10 @@ impl JobPlan {
         self.scheduled_for
     }
 
-    pub fn submit(self, producer: &crate::Producer) -> Result<String> {
+    pub async fn submit(self, producer: &crate::Producer) -> Result<String> {
         if self.payload.is_none() {
             return Err(JonoError::InvalidJob("Job payload is required".to_string()));
         }
-        producer.submit_job(self)
+        producer.submit_job(self).await
     }
 }

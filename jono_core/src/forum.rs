@@ -1,16 +1,28 @@
 use crate::{JonoError, Result};
-use redis::Client as RedisClient;
+use deadpool_redis::{Config, Pool, Runtime};
+use redis::RedisError;
 
 /// Central Redis connection pool that manages access to all topics
 pub struct Forum {
-    redis_client: RedisClient,
+    redis_pool: Pool,
+    redis_url: String,
 }
 
 impl Forum {
     /// Create a forum with the specified Redis URL
     pub fn new(redis_url: &str) -> Result<Self> {
-        let redis_client = RedisClient::open(redis_url)?;
-        Ok(Self { redis_client })
+        let cfg = Config::from_url(redis_url);
+        let pool = cfg.create_pool(Some(Runtime::Tokio1)).map_err(|e| {
+            JonoError::Redis(RedisError::from((
+                redis::ErrorKind::IoError,
+                "Failed to create pool",
+                e.to_string(),
+            )))
+        })?;
+        Ok(Self {
+            redis_pool: pool,
+            redis_url: redis_url.to_string(),
+        })
     }
 
     /// Create a forum by trying to get the Redis URL from environment variables
@@ -36,16 +48,22 @@ impl Forum {
         crate::Context::new(self.clone(), topic)
     }
 
-    /// Get a reference to the underlying Redis client
-    pub(crate) fn redis_client(&self) -> &RedisClient {
-        &self.redis_client
+    /// Get a reference to the underlying Redis pool
+    pub(crate) fn redis_pool(&self) -> &Pool {
+        &self.redis_pool
+    }
+
+    /// Get the Redis URL used by this forum
+    pub fn redis_url(&self) -> &str {
+        &self.redis_url
     }
 }
 
 impl Clone for Forum {
     fn clone(&self) -> Self {
         Self {
-            redis_client: self.redis_client.clone(),
+            redis_pool: self.redis_pool.clone(),
+            redis_url: self.redis_url.clone(),
         }
     }
 }
