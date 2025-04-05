@@ -1,6 +1,5 @@
 use crate::{JonoError, Result};
 use deadpool_redis::{Config, Pool, Runtime};
-use redis::RedisError;
 
 /// Central Redis connection pool that manages access to all topics
 pub struct Forum {
@@ -11,14 +10,14 @@ pub struct Forum {
 impl Forum {
     /// Create a forum with the specified Redis URL
     pub fn new(redis_url: &str) -> Result<Self> {
-        let cfg = Config::from_url(redis_url);
-        let pool = cfg.create_pool(Some(Runtime::Tokio1)).map_err(|e| {
-            JonoError::Redis(RedisError::from((
-                redis::ErrorKind::IoError,
-                "Failed to create pool",
-                e.to_string(),
-            )))
-        })?;
+        #[cfg(feature = "runtime-tokio")]
+        let runtime = Some(Runtime::Tokio1);
+
+        #[cfg(feature = "runtime-async-std")]
+        let runtime = Some(Runtime::AsyncStd1);
+
+        let pool = Config::from_url(redis_url).create_pool(runtime)?;
+
         Ok(Self {
             redis_pool: pool,
             redis_url: redis_url.to_string(),
