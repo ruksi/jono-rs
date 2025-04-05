@@ -60,6 +60,11 @@ impl JobFixture {
     fn clean_sync(&self) -> jono_core::Result<()> {
         let keys = self.context.keys();
 
+        // this is a bit unorthodox, but this cleaning is done on Drop
+        // which is synchronous; would need to figure out a nicer way
+        // to do this in an async context without running into issue
+        // of runtime inside runtime
+
         let client = redis::Client::open(self.context.forum().redis_url())?;
         let mut conn = client.get_connection()?;
 
