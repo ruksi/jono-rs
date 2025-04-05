@@ -17,7 +17,7 @@ is used to get the next job to be processed.
 [dependencies]
 jono = "0.1.6-rc.6"
 # or
-jono = { version = "0.1.6-rc.6", default-features = false, features = ["produce"] }
+jono = { version = "0.1.6-rc.6", default-features = false, features = ["produce", "runtime-tokio", "tls-none"] }
 ```
 
 ```rust
@@ -25,7 +25,7 @@ use jono::prelude::*;
 use jono_core::Result;
 use serde_json::json;
 
-pub fn codebase_1() -> Result<()> {
+pub async fn codebase_1() -> Result<()> {
     let forum = Forum::try_from_env()?; // "JONO_REDIS_URL" > "REDIS_URL" > Err
     let context = forum.topic("work-work");
 
@@ -33,7 +33,8 @@ pub fn codebase_1() -> Result<()> {
     let producer = Producer::with_context(context);
     let job_id = JobPlan::new()
         .payload(json!({"my-key": "my-value"}))
-        .submit(&producer)?;
+        .submit(&producer)
+        .await?;
 }
 ```
 
@@ -41,20 +42,20 @@ pub fn codebase_1() -> Result<()> {
 [dependencies]
 jono = "0.1.6-rc.6"
 # or
-jono = { version = "0.1.6-rc.6", default-features = false, features = ["consume"] }
+jono = { version = "0.1.6-rc.6", default-features = false, features = ["consume", "runtime-tokio", "tls-none"] }
 ```
 
 ```rust
 use jono::prelude::*;
 use jono_core::Result;
 
-pub fn codebase_2() -> Result<()> {
+pub async fn codebase_2() -> Result<()> {
     let forum = Forum::try_from_env()?;  // "JONO_REDIS_URL" > "REDIS_URL" > Err
     let context = forum.topic("work-work");
 
     // to process jobs; the worker code is further below:
     let consumer = Consumer::with_context(context, NoopWorker);
-    let outcome = consumer.run_next()?;
+    let outcome = consumer.run_next().await?;
     match outcome {
         Some(Outcome::Success(_)) => {
             todo!("You want to do something on the worker right after?");
@@ -71,7 +72,7 @@ pub fn codebase_2() -> Result<()> {
 struct NoopWorker;
 
 impl Worker for NoopWorker {
-    fn process(&self, _: &Workload) -> Result<Outcome> {
+    async fn process(&self, _: &Workload) -> Result<Outcome> {
         Ok(Outcome::Success(Some(json!({"processed": true}))))
     }
 }
@@ -81,20 +82,20 @@ impl Worker for NoopWorker {
 [dependencies]
 jono = "0.1.6-rc.6"
 # or
-jono = { version = "0.1.6-rc.6", default-features = false, features = ["harvest"] }
+jono = { version = "0.1.6-rc.6", default-features = false, features = ["harvest", "runtime-tokio", "tls-none"] }
 ```
 
 ```rust
 use jono::prelude::*;
 use jono_core::Result;
 
-pub fn codebase_3() -> Result<()> {
+pub async fn codebase_3() -> Result<()> {
     let forum = Forum::try_from_env()?;  // "JONO_REDIS_URL" > "REDIS_URL" > Err
     let context = forum.topic("work-work");
 
     // to post-process job results:
     let harvester = Harvester::with_context(context);
-    let harvestables = harvester.harvest(3)?;
+    let harvestables = harvester.harvest(3).await?;
     // do something with the completed job payload and outcome
 }
 ```
