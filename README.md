@@ -55,12 +55,12 @@ pub async fn codebase_2() -> Result<()> {
 
     // to process jobs; the worker code is further below:
     let consumer = Consumer::with_context(context, NoopWorker);
-    let outcome = consumer.run_next().await?;
-    match outcome {
-        Some(Outcome::Success(_)) => {
+    let summary = consumer.run_next().await?;
+    match summary {
+        Some(WorkSummary::Success(_)) => {
             todo!("You want to do something on the worker right after?");
         }
-        Some(Outcome::Failure(_)) => {
+        Some(WorkSummary::Failure(_)) => {
             todo!("... or specifically on failure?");
         }
         None => {
@@ -72,8 +72,8 @@ pub async fn codebase_2() -> Result<()> {
 struct NoopWorker;
 
 impl Worker for NoopWorker {
-    async fn process(&self, _: &Workload) -> Result<Outcome> {
-        Ok(Outcome::Success(Some(json!({"processed": true}))))
+    async fn work(&self, _: &Workload) -> Result<WorkSummary> {
+        Ok(WorkSummary::Success(Some(json!({"processed": true}))))
     }
 }
 ```
@@ -97,5 +97,7 @@ pub async fn codebase_3() -> Result<()> {
     let harvester = Harvester::with_context(context);
     let harvestables = harvester.harvest(3).await?;
     // do something with the completed job payload and outcome
+  
+    // OR, use the `Reaper` trait approach, TODO
 }
 ```
