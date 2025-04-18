@@ -25,9 +25,9 @@ use jono::prelude::*;
 use jono_core::Result;
 use serde_json::json;
 
-pub async fn codebase_1() -> Result<()> {
-    let forum = Forum::try_from_env()?; // "JONO_REDIS_URL" > "REDIS_URL" > Err
-    let context = forum.topic("work-work");
+pub async fn codebase_1() -> Result<()> { 
+    // tries "JONO_REDIS_URL" > "REDIS_URL" > Err
+    let context = Context::try_from_env("work-work")?;
 
     // to submit new jobs:
     let producer = Producer::with_context(context);
@@ -50,8 +50,8 @@ use jono::prelude::*;
 use jono_core::Result;
 
 pub async fn codebase_2() -> Result<()> {
-    let forum = Forum::try_from_env()?;  // "JONO_REDIS_URL" > "REDIS_URL" > Err
-    let context = forum.topic("work-work");
+    // tries "JONO_REDIS_URL" > "REDIS_URL" > Err
+    let context = Context::try_from_env("work-work")?;
 
     // to process jobs; the worker code is further below:
     let consumer = Consumer::with_context(context, NoopWorker);
@@ -90,8 +90,8 @@ use jono::prelude::*;
 use jono_core::Result;
 
 pub async fn codebase_3() -> Result<()> {
-    let forum = Forum::try_from_env()?;  // "JONO_REDIS_URL" > "REDIS_URL" > Err
-    let context = forum.topic("work-work");
+    // tries "JONO_REDIS_URL" > "REDIS_URL" > Err
+    let context = Context::try_from_env("work-work")?;
 
     // to post-process job results:
     let harvester = Harvester::with_context(context);

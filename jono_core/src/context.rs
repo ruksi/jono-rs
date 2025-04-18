@@ -18,6 +18,11 @@ impl Context {
         }
     }
 
+    pub fn try_from_env(topic: impl ToString) -> Result<Self> {
+        let forum = Forum::try_from_env()?;
+        Ok(Self::new(forum, topic))
+    }
+
     /// Get a Redis connection from the forum
     pub async fn get_connection(&self) -> Result<impl redis::aio::ConnectionLike> {
         Ok(self.forum.redis_pool().get().await?)
@@ -32,7 +37,7 @@ impl Context {
     pub fn keys(&self) -> &Keys {
         &self.keys
     }
-    
+
     /// Get the forum for this context
     pub fn forum(&self) -> &Forum {
         &self.forum
