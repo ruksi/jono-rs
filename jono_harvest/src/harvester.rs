@@ -1,4 +1,4 @@
-use crate::{HarvestConfig, Reaper, Reapload, ReapSummary};
+use crate::{HarvestConfig, ReapSummary, Reaper, Reapload};
 use jono_core::*;
 use redis::AsyncCommands;
 use std::thread;
@@ -59,7 +59,7 @@ impl<R: Reaper> Harvester<R> {
 
         for job_metadata in harvested {
             let reapload = Reapload::from_metadata(job_metadata);
-            match self.reaper.process(&reapload).await {
+            match self.reaper.reap(&reapload).await {
                 Ok(summary) => reap_summaries.push(summary),
                 Err(e) => return Err(e),
             }

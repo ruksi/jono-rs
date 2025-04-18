@@ -10,7 +10,7 @@ use serde_json::json;
 struct NoopWorker;
 
 impl Worker for NoopWorker {
-    async fn process(&self, _: &Workload) -> Result<WorkSummary> {
+    async fn work(&self, _: &Workload) -> Result<WorkSummary> {
         Ok(WorkSummary::Success(Some(json!({"processed": true}))))
     }
 }

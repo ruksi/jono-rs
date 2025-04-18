@@ -10,7 +10,7 @@ use serde_json::json;
 struct NoopWorker;
 
 impl Worker for NoopWorker {
-    async fn process(&self, _: &Workload) -> Result<WorkSummary> {
+    async fn work(&self, _: &Workload) -> Result<WorkSummary> {
         Ok(WorkSummary::Success(Some(json!({"processed": true}))))
     }
 }
@@ -18,7 +18,7 @@ impl Worker for NoopWorker {
 struct NoopReaper;
 
 impl Reaper for NoopReaper {
-    async fn process(&self, _: &Reapload) -> Result<ReapSummary> {
+    async fn reap(&self, _: &Reapload) -> Result<ReapSummary> {
         Ok(ReapSummary::Success(None))
     }
 }
@@ -73,7 +73,7 @@ async fn test_reaping() -> Result<()> {
 
     struct MyReaper;
     impl Reaper for MyReaper {
-        async fn process(&self, reapload: &Reapload) -> Result<ReapSummary> {
+        async fn reap(&self, reapload: &Reapload) -> Result<ReapSummary> {
             Ok(ReapSummary::Success(Some(json!({
                 "reaped": true,
                 "job_id": reapload.job_id

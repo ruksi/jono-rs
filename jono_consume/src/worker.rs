@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::future::Future;
 
 pub trait Worker: Send + Sync {
-    fn process<'a>(
+    fn work<'a>(
         &'a self,
         load: &'a Workload,
     ) -> impl Future<Output = Result<WorkSummary>> + Send + 'a;

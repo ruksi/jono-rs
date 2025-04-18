@@ -3,7 +3,7 @@ use serde_json::Value;
 use std::future::Future;
 
 pub trait Reaper: Send + Sync {
-    fn process<'a>(
+    fn reap<'a>(
         &'a self,
         load: &'a Reapload,
     ) -> impl Future<Output = Result<ReapSummary>> + Send + 'a;

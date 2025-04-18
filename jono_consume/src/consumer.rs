@@ -103,7 +103,7 @@ impl<W: Worker> Consumer<W> {
             return Ok(WorkSummary::Failure("Job was canceled".to_string()));
         }
 
-        let summary = self.worker.process(&workload).await?;
+        let summary = self.worker.work(&workload).await?;
 
         match &summary {
             WorkSummary::Success(summary_data) => {
