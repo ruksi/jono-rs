@@ -15,12 +15,20 @@ impl Worker for NoopWorker {
     }
 }
 
+struct NoopReaper;
+
+impl Reaper for NoopReaper {
+    async fn process(&self, _: &Reapload) -> Result<Yield> {
+        Ok(Yield::Success(None))
+    }
+}
+
 #[tokio::test]
 async fn test_basics() -> Result<()> {
     let context = create_test_context();
     let inspector = Inspector::with_context(context.clone());
     let producer = Producer::with_context(context.clone());
-    let harvester = Harvester::with_context(context.clone());
+    let harvester = Harvester::with_context(context.clone(), NoopReaper);
 
     assert_eq!(harvester.harvest(1).await?.len(), 0);
 
@@ -56,9 +64,50 @@ async fn test_basics() -> Result<()> {
 }
 
 #[tokio::test]
+async fn test_reaping() -> Result<()> {
+    let context = create_test_context();
+    let producer = Producer::with_context(context.clone());
+
+    struct MyReaper;
+    impl Reaper for MyReaper {
+        async fn process(&self, reapload: &Reapload) -> Result<Yield> {
+            Ok(Yield::Success(Some(json!({
+                "reaped": true,
+                "job_id": reapload.job_id
+            }))))
+        }
+    }
+    let harvester = Harvester::with_context(context.clone(), MyReaper);
+
+    let job_id = JobPlan::new()
+        .payload(json!({"action": "test_reaping"}))
+        .submit(&producer)
+        .await?;
+
+    let consumer = Consumer::with_context(context.clone(), NoopWorker);
+    let outcome = consumer.run_next().await?;
+    assert!(matches!(outcome, Some(Outcome::Success(_))));
+
+    // the job should now be in the harvestable set,
+    // ready to be reaped
+    let yields = harvester.run_next_batch().await?;
+
+    assert_eq!(yields.len(), 1);
+    if let Yield::Success(Some(data)) = &yields[0] {
+        assert_eq!(data["reaped"], json!(true));
+        assert_eq!(data["job_id"], json!(job_id));
+    } else {
+        panic!("Expected Success yield with data");
+    }
+
+    producer.clean_job(&job_id).await?;
+    Ok(())
+}
+
+#[tokio::test]
 async fn test_nonexistent() -> Result<()> {
     let context = create_test_context();
-    let harvester = Harvester::with_context(context.clone());
+    let harvester = Harvester::with_context(context.clone(), NoopReaper);
     assert_eq!(harvester.harvest(0).await?.len(), 0);
     assert_eq!(harvester.harvest(1).await?.len(), 0);
     assert_eq!(harvester.harvest(2).await?.len(), 0);
@@ -69,7 +118,7 @@ async fn test_nonexistent() -> Result<()> {
 async fn test_clean_harvest() -> Result<()> {
     let context = create_test_context();
     let producer = Producer::with_context(context.clone());
-    let harvester = Harvester::with_context(context.clone());
+    let harvester = Harvester::with_context(context.clone(), NoopReaper);
 
     let job_id = JobPlan::new()
         .payload(json!({"action": "test_action"}))
