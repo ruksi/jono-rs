@@ -3,29 +3,31 @@ use serde_json::Value;
 use std::future::Future;
 
 pub trait Reaper: Send + Sync {
-    fn process<'a>(&'a self, load: &'a Reapload)
-    -> impl Future<Output = Result<Yield>> + Send + 'a;
+    fn process<'a>(
+        &'a self,
+        load: &'a Reapload,
+    ) -> impl Future<Output = Result<ReapSummary>> + Send + 'a;
 }
 
 pub struct Reapload {
     pub job_id: String,
     pub payload: Value,
-    pub outcome: Value,
+    pub work_summary: Value,
 }
 
 impl Reapload {
     pub fn from_metadata(metadata: JobMetadata) -> Self {
-        let outcome = metadata.outcome.unwrap_or(Value::Null);
+        let work_summary = metadata.work_summary.unwrap_or(Value::Null);
         Self {
             job_id: metadata.id,
             payload: metadata.payload,
-            outcome,
+            work_summary,
         }
     }
 }
 
 #[derive(Debug, Clone)]
-pub enum Yield {
+pub enum ReapSummary {
     Success(Option<Value>),
     Failure(String),
 }

@@ -1,5 +1,5 @@
 use crate::consumer_config::ConsumerConfig;
-use crate::{Outcome, Worker, Workload};
+use crate::{WorkSummary, Worker, Workload};
 use jono_core::{Context, Inspector, JonoError, Result, current_timestamp_ms};
 use redis::AsyncCommands;
 use serde_json::json;
@@ -50,11 +50,11 @@ impl<W: Worker> Consumer<W> {
         }
     }
 
-    pub async fn run_next(&self) -> Result<Option<Outcome>> {
+    pub async fn run_next(&self) -> Result<Option<WorkSummary>> {
         match self.acquire_next_job().await? {
             Some(metadata) => {
-                let outcome = self.process_job(metadata).await?;
-                Ok(Some(outcome))
+                let summary = self.process_job(metadata).await?;
+                Ok(Some(summary))
             }
             None => Ok(None),
         }
@@ -94,40 +94,45 @@ impl<W: Worker> Consumer<W> {
         Ok(())
     }
 
-    async fn process_job(&self, workload: Workload) -> Result<Outcome> {
+    async fn process_job(&self, workload: Workload) -> Result<WorkSummary> {
         let inspector = Inspector::with_context(self.context.clone());
         if !inspector.job_exists(&workload.job_id).await? {
-            return Ok(Outcome::Failure("Job no longer exists".to_string()));
+            return Ok(WorkSummary::Failure("Job no longer exists".to_string()));
         }
         if inspector.job_is_canceled(&workload.job_id).await? {
-            return Ok(Outcome::Failure("Job was canceled".to_string()));
+            return Ok(WorkSummary::Failure("Job was canceled".to_string()));
         }
 
-        let outcome = self.worker.process(&workload).await?;
+        let summary = self.worker.process(&workload).await?;
 
-        match &outcome {
-            Outcome::Success(outcome_data) => {
-                self.complete_job(&workload.job_id, outcome_data.clone()).await?;
+        match &summary {
+            WorkSummary::Success(summary_data) => {
+                self.complete_job(&workload.job_id, summary_data.clone())
+                    .await?;
             }
-            Outcome::Failure(error_message) => {
+            WorkSummary::Failure(error_message) => {
                 eprintln!("Job {} failed: {}", workload.job_id, error_message);
                 todo!();
             }
         }
 
-        Ok(outcome)
+        Ok(summary)
     }
 
-    async fn complete_job(&self, job_id: &str, outcome: Option<serde_json::Value>) -> Result<()> {
+    async fn complete_job(
+        &self,
+        job_id: &str,
+        work_summary: Option<serde_json::Value>,
+    ) -> Result<()> {
         let mut conn = self.get_connection().await?;
         let keys = self.context.keys();
 
-        let out_data = outcome.unwrap_or(json!(null));
-        let out_json = serde_json::to_string(&out_data)?;
+        let summ_data = work_summary.unwrap_or(json!(null));
+        let summ_json = serde_json::to_string(&summ_data)?;
         let metadata_key = keys.job_metadata_hash(job_id);
 
         let now = current_timestamp_ms();
-        let ttl_ms = 24 * 60 * 60 * 1000; // 24 hours to collect the outcomes
+        let ttl_ms = 24 * 60 * 60 * 1000; // 24 hours to collect the work summaries
         let expiry_time_score = now + ttl_ms;
 
         let _: () = redis::pipe()
@@ -135,7 +140,7 @@ impl<W: Worker> Consumer<W> {
             .zadd(keys.harvestable_set(), job_id, expiry_time_score)
             .hset(&metadata_key, "status", "completed")
             .hset(&metadata_key, "completed_at", now.to_string())
-            .hset(&metadata_key, "outcome", out_json)
+            .hset(&metadata_key, "work_summary", summ_json)
             .expire(&metadata_key, ttl_ms / 1000)
             .query_async(&mut conn)
             .await?;

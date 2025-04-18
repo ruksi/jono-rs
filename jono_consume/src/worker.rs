@@ -3,7 +3,10 @@ use serde_json::Value;
 use std::future::Future;
 
 pub trait Worker: Send + Sync {
-    fn process<'a>(&'a self, job: &'a Workload) -> impl Future<Output = Result<Outcome>> + Send + 'a;
+    fn process<'a>(
+        &'a self,
+        load: &'a Workload,
+    ) -> impl Future<Output = Result<WorkSummary>> + Send + 'a;
 }
 
 pub struct Workload {
@@ -21,7 +24,7 @@ impl Workload {
 }
 
 #[derive(Debug, Clone)]
-pub enum Outcome {
+pub enum WorkSummary {
     Success(Option<Value>),
     Failure(String),
 }

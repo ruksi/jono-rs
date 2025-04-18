@@ -1,4 +1,4 @@
-use crate::{HarvestConfig, Yield, Reaper, Reapload};
+use crate::{HarvestConfig, Reaper, Reapload, ReapSummary};
 use jono_core::*;
 use redis::AsyncCommands;
 use std::thread;
@@ -29,7 +29,7 @@ impl<R: Reaper> Harvester<R> {
 
         loop {
             match self.run_next_batch().await {
-                Ok(outcomes) if !outcomes.is_empty() => {
+                Ok(reap_summaries) if !reap_summaries.is_empty() => {
                     consecutive_errors = 0;
                 }
                 Ok(_) => {
@@ -49,23 +49,23 @@ impl<R: Reaper> Harvester<R> {
         }
     }
 
-    pub async fn run_next_batch(&self) -> Result<Vec<Yield>> {
+    pub async fn run_next_batch(&self) -> Result<Vec<ReapSummary>> {
         let harvested = self.harvest(self.config.get_batch_size()).await?;
         if harvested.is_empty() {
             return Ok(Vec::new());
         }
 
-        let mut outcomes = Vec::with_capacity(harvested.len());
+        let mut reap_summaries = Vec::with_capacity(harvested.len());
 
         for job_metadata in harvested {
             let reapload = Reapload::from_metadata(job_metadata);
             match self.reaper.process(&reapload).await {
-                Ok(outcome) => outcomes.push(outcome),
+                Ok(summary) => reap_summaries.push(summary),
                 Err(e) => return Err(e),
             }
         }
 
-        Ok(outcomes)
+        Ok(reap_summaries)
     }
 
     /// Harvest jobs that have been completed and are ready for post-processing (just-once)

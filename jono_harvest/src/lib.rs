@@ -6,8 +6,8 @@ mod reaper;
 
 pub use harvester::Harvester;
 pub use harvester_config::HarvestConfig;
-pub use reaper::{Reaper, Reapload, Yield};
+pub use reaper::{ReapSummary, Reaper, Reapload};
 
 pub mod prelude {
-    pub use crate::{HarvestConfig, Harvester, Reaper, Reapload, Yield};
+    pub use crate::{HarvestConfig, Harvester, ReapSummary, Reaper, Reapload};
 }

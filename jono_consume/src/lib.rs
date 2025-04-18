@@ -8,8 +8,8 @@ mod worker;
 
 pub use consumer::Consumer;
 pub use consumer_config::ConsumerConfig;
-pub use worker::{Outcome, Worker, Workload};
+pub use worker::{WorkSummary, Worker, Workload};
 
 pub mod prelude {
-    pub use crate::{Consumer, ConsumerConfig, Outcome, Worker, Workload};
+    pub use crate::{Consumer, ConsumerConfig, WorkSummary, Worker, Workload};
 }

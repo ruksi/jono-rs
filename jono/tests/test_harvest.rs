@@ -10,16 +10,16 @@ use serde_json::json;
 struct NoopWorker;
 
 impl Worker for NoopWorker {
-    async fn process(&self, _: &Workload) -> Result<Outcome> {
-        Ok(Outcome::Success(Some(json!({"processed": true}))))
+    async fn process(&self, _: &Workload) -> Result<WorkSummary> {
+        Ok(WorkSummary::Success(Some(json!({"processed": true}))))
     }
 }
 
 struct NoopReaper;
 
 impl Reaper for NoopReaper {
-    async fn process(&self, _: &Reapload) -> Result<Yield> {
-        Ok(Yield::Success(None))
+    async fn process(&self, _: &Reapload) -> Result<ReapSummary> {
+        Ok(ReapSummary::Success(None))
     }
 }
 
@@ -41,8 +41,8 @@ async fn test_basics() -> Result<()> {
     assert_eq!(harvester.harvest(1).await?.len(), 0);
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
-    let outcome = consumer.run_next().await?;
-    assert!(matches!(outcome, Some(Outcome::Success(_))));
+    let work_summary = consumer.run_next().await?;
+    assert!(matches!(work_summary, Some(WorkSummary::Success(_))));
 
     // it shouldn't be expired, yet
     let expired_count = harvester.clean_expired_harvest().await?;
@@ -53,7 +53,10 @@ async fn test_basics() -> Result<()> {
     assert_eq!(harvestables.len(), 1);
     let job_metadata = harvestables.first().unwrap().clone();
     assert_eq!(job_metadata.payload, json!({"action": "test_action"}));
-    assert_eq!(job_metadata.outcome.unwrap(), json!({"processed": true}));
+    assert_eq!(
+        job_metadata.work_summary.unwrap(),
+        json!({"processed": true})
+    );
 
     // the single harvestable was processed already
     let harvestables = harvester.harvest(1).await?;
@@ -70,8 +73,8 @@ async fn test_reaping() -> Result<()> {
 
     struct MyReaper;
     impl Reaper for MyReaper {
-        async fn process(&self, reapload: &Reapload) -> Result<Yield> {
-            Ok(Yield::Success(Some(json!({
+        async fn process(&self, reapload: &Reapload) -> Result<ReapSummary> {
+            Ok(ReapSummary::Success(Some(json!({
                 "reaped": true,
                 "job_id": reapload.job_id
             }))))
@@ -85,19 +88,19 @@ async fn test_reaping() -> Result<()> {
         .await?;
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
-    let outcome = consumer.run_next().await?;
-    assert!(matches!(outcome, Some(Outcome::Success(_))));
+    let work_summary = consumer.run_next().await?;
+    assert!(matches!(work_summary, Some(WorkSummary::Success(_))));
 
     // the job should now be in the harvestable set,
     // ready to be reaped
-    let yields = harvester.run_next_batch().await?;
+    let reap_summaries = harvester.run_next_batch().await?;
 
-    assert_eq!(yields.len(), 1);
-    if let Yield::Success(Some(data)) = &yields[0] {
+    assert_eq!(reap_summaries.len(), 1);
+    if let ReapSummary::Success(Some(data)) = &reap_summaries[0] {
         assert_eq!(data["reaped"], json!(true));
         assert_eq!(data["job_id"], json!(job_id));
     } else {
-        panic!("Expected Success yield with data");
+        panic!("Expected success summary with data");
     }
 
     producer.clean_job(&job_id).await?;
@@ -126,8 +129,8 @@ async fn test_clean_harvest() -> Result<()> {
         .await?;
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
-    let outcome = consumer.run_next().await?;
-    assert!(matches!(outcome, Some(Outcome::Success(_))));
+    let work_summary = consumer.run_next().await?;
+    assert!(matches!(work_summary, Some(WorkSummary::Success(_))));
 
     // if the job is cleaned, it can't be harvested even once
     producer.clean_job(&job_id).await?;

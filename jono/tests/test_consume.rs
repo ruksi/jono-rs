@@ -10,8 +10,8 @@ use serde_json::json;
 struct NoopWorker;
 
 impl Worker for NoopWorker {
-    async fn process(&self, _: &Workload) -> Result<Outcome> {
-        Ok(Outcome::Success(Some(json!({"processed": true}))))
+    async fn process(&self, _: &Workload) -> Result<WorkSummary> {
+        Ok(WorkSummary::Success(Some(json!({"processed": true}))))
     }
 }
 
@@ -27,13 +27,13 @@ async fn test_basics() -> Result<()> {
     assert_eq!(inspector.get_job_status(&job_id).await?, JobStatus::Queued);
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker);
-    let outcome = consumer.run_next().await?;
-    let Some(Outcome::Success(_)) = outcome else {
-        panic!("Expected job to succeed but got {:?}", outcome);
+    let summary = consumer.run_next().await?;
+    let Some(WorkSummary::Success(_)) = summary else {
+        panic!("Expected job to succeed but got {:?}", summary);
     };
 
     let metadata = inspector.get_job_metadata(&job_id).await?;
-    assert_eq!(metadata.outcome.unwrap(), json!({"processed": true}));
+    assert_eq!(metadata.work_summary.unwrap(), json!({"processed": true}));
     assert_eq!(
         inspector.get_job_status(&job_id).await?,
         JobStatus::Harvestable
@@ -60,8 +60,8 @@ async fn test_with_config() -> Result<()> {
             .heartbeat_interval(Duration::from_secs(2)),
     );
 
-    let outcome = consumer.run_next().await?.unwrap();
-    let Outcome::Success(_) = outcome else {
+    let work_summary = consumer.run_next().await?.unwrap();
+    let WorkSummary::Success(_) = work_summary else {
         panic!("Expected job to succeed");
     };
 

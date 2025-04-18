@@ -24,7 +24,7 @@ pub struct JobMetadata {
     pub attempt_history: Vec<serde_json::Value>,
 
     // Result on job completion from the worker
-    pub outcome: Option<serde_json::Value>,
+    pub work_summary: Option<serde_json::Value>,
 }
 
 impl JobMetadata {
@@ -58,11 +58,11 @@ impl JobMetadata {
             .parse::<i64>()
             .map_err(|_| JonoError::InvalidJob("Invalid initial_priority".to_string()))?;
 
-        let outcome_str = hash
-            .get("outcome")
-            .ok_or_else(|| JonoError::InvalidJob("Missing outcome field".to_string()))?;
-        let outcome = serde_json::from_str(outcome_str)
-            .map_err(|_| JonoError::InvalidJob("Invalid outcome JSON".to_string()))?;
+        let work_summary_str = hash
+            .get("work_summary")
+            .ok_or_else(|| JonoError::InvalidJob("Missing work_summary field".to_string()))?;
+        let work_summary = serde_json::from_str(work_summary_str)
+            .map_err(|_| JonoError::InvalidJob("Invalid work_summary JSON".to_string()))?;
 
         Ok(Self {
             id,
@@ -71,7 +71,7 @@ impl JobMetadata {
             attempt_count,
             initial_priority,
             attempt_history: vec![],
-            outcome,
+            work_summary,
         })
     }
 }

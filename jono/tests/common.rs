@@ -46,7 +46,7 @@ impl JobFixture {
             .hset(&metadata_key, "initial_priority", "0")
             .hset(&metadata_key, "created_at", now.to_string())
             .hset(&metadata_key, "attempt_history", "[]")
-            .hset(&metadata_key, "outcome", "null")
+            .hset(&metadata_key, "work_summary", "null")
             .hset(&metadata_key, "status", status.to_string())
             .query_async(&mut conn)
             .await?;

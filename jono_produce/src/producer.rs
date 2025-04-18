@@ -41,7 +41,7 @@ impl Producer {
             )
             .hset(&metadata_key, "created_at", now.to_string())
             .hset(&metadata_key, "attempt_history", "[]")
-            .hset(&metadata_key, "outcome", "null")
+            .hset(&metadata_key, "work_summary", "null")
             .query_async(&mut conn)
             .await?;
 
