@@ -19,6 +19,11 @@ impl Keys {
         format!("{}:{{{}}}:job:{}", self.prefix, self.topic, job_id)
     }
 
+    /// Redis key for the sorted set that holds the postponed jobs with to-be-executed timestamps as scores
+    pub fn postponed_set(&self) -> String {
+        format!("{}:{{{}}}:postponed", self.prefix, self.topic)
+    }
+
     /// Redis key for the sorted set that holds queued jobs with priority as scores
     pub fn queued_set(&self) -> String {
         format!("{}:{{{}}}:queued", self.prefix, self.topic)
@@ -27,11 +32,6 @@ impl Keys {
     /// Redis key for the sorted set that holds running jobs with heartbeat timestamps as scores
     pub fn running_set(&self) -> String {
         format!("{}:{{{}}}:running", self.prefix, self.topic)
-    }
-
-    /// Redis key for the sorted set that holds the scheduled jobs with to-be-executed timestamps as scores
-    pub fn scheduled_set(&self) -> String {
-        format!("{}:{{{}}}:scheduled", self.prefix, self.topic)
     }
 
     /// Redis key for the sorted set that communicates which jobs have been canceled with grace period timestamps as scores

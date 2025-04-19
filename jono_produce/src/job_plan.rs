@@ -15,7 +15,7 @@ pub struct JobPlan {
     priority: i64,
 
     /// When the job should be executed; UNIX timestamp in milliseconds or 0 to be executed as soon as possible
-    scheduled_for: i64,
+    postponed_to: i64,
 }
 
 impl JobPlan {
@@ -24,7 +24,7 @@ impl JobPlan {
             payload: None,
             max_attempts: 1,
             priority: 0,
-            scheduled_for: 0,
+            postponed_to: 0,
         }
     }
 
@@ -52,12 +52,12 @@ impl JobPlan {
         self.priority
     }
 
-    pub fn scheduled_for(mut self, scheduled_for: i64) -> JobPlan {
-        self.scheduled_for = scheduled_for;
+    pub fn postponed_to(mut self, postponed_to: i64) -> JobPlan {
+        self.postponed_to = postponed_to;
         self
     }
-    pub fn get_scheduled_for(&self) -> i64 {
-        self.scheduled_for
+    pub fn get_postponed_to(&self) -> i64 {
+        self.postponed_to
     }
 
     pub async fn submit(self, producer: &crate::Producer) -> Result<String> {

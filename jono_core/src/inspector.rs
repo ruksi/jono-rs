@@ -59,12 +59,12 @@ impl Inspector {
             return Ok(JobStatus::Queued);
         }
 
-        let in_scheduled_set: bool = conn
-            .zscore::<_, _, Option<i64>>(keys.scheduled_set(), job_id)
+        let in_postponed_set: bool = conn
+            .zscore::<_, _, Option<i64>>(keys.postponed_set(), job_id)
             .await?
             .is_some();
-        if in_scheduled_set {
-            return Ok(JobStatus::Scheduled);
+        if in_postponed_set {
+            return Ok(JobStatus::Postponed);
         }
 
         let in_canceled_set: bool = conn
@@ -126,9 +126,9 @@ impl Inspector {
         let states_to_fetch = match filter.states.as_deref() {
             Some(specific_states) => specific_states,
             None => &[
+                JobStatus::Postponed,
                 JobStatus::Queued,
                 JobStatus::Running,
-                JobStatus::Scheduled,
                 JobStatus::Canceled,
                 JobStatus::Harvestable,
             ],
@@ -146,6 +146,10 @@ impl Inspector {
 
         for status in states_to_fetch {
             match status {
+                JobStatus::Postponed => {
+                    pipe.zrange(keys.postponed_set(), 0, -1);
+                    status_to_index.push(JobStatus::Postponed);
+                }
                 JobStatus::Queued => {
                     pipe.zrange(keys.queued_set(), 0, -1);
                     status_to_index.push(JobStatus::Queued);
@@ -153,10 +157,6 @@ impl Inspector {
                 JobStatus::Running => {
                     pipe.zrange(keys.running_set(), 0, -1);
                     status_to_index.push(JobStatus::Running);
-                }
-                JobStatus::Scheduled => {
-                    pipe.zrange(keys.scheduled_set(), 0, -1);
-                    status_to_index.push(JobStatus::Scheduled);
                 }
                 JobStatus::Canceled => {
                     pipe.zrange(keys.canceled_set(), 0, -1);
@@ -180,9 +180,9 @@ impl Inspector {
         for (i, status) in status_to_index.iter().enumerate() {
             if i < result.len() {
                 match status {
+                    JobStatus::Postponed => map.postponed = std::mem::take(&mut result[i]),
                     JobStatus::Queued => map.queued = std::mem::take(&mut result[i]),
                     JobStatus::Running => map.running = std::mem::take(&mut result[i]),
-                    JobStatus::Scheduled => map.scheduled = std::mem::take(&mut result[i]),
                     JobStatus::Canceled => map.canceled = std::mem::take(&mut result[i]),
                     JobStatus::Harvestable => map.harvestable = std::mem::take(&mut result[i]),
                     JobStatus::Failed => {} // TODO: wait for the deadletter implementation
@@ -220,9 +220,9 @@ impl Inspector {
 
         let Some(states) = filter.states.as_deref() else {
             return Ok(MapStatusToJobMetadata {
+                postponed: process(&status_to_job_ids.postponed).await,
                 queued: process(&status_to_job_ids.queued).await,
                 running: process(&status_to_job_ids.running).await,
-                scheduled: process(&status_to_job_ids.scheduled).await,
                 canceled: process(&status_to_job_ids.canceled).await,
                 harvestable: process(&status_to_job_ids.harvestable).await,
             });
@@ -233,9 +233,9 @@ impl Inspector {
         for state in states {
             use JobStatus::*;
             match state {
+                Postponed => result.postponed = process(&status_to_job_ids.postponed).await,
                 Queued => result.queued = process(&status_to_job_ids.queued).await,
                 Running => result.running = process(&status_to_job_ids.running).await,
-                Scheduled => result.scheduled = process(&status_to_job_ids.scheduled).await,
                 Canceled => result.canceled = process(&status_to_job_ids.canceled).await,
                 Harvestable => result.harvestable = process(&status_to_job_ids.harvestable).await,
                 Failed => {} // TODO: wait for the deadletter implementation
@@ -258,12 +258,12 @@ pub struct JobFilter {
 
 #[derive(Debug, Clone, Default)]
 pub struct MapStatusToJobId {
+    /// Jobs postponed for running at a future time
+    pub postponed: Vec<String>,
     /// Jobs in waiting to be processed
     pub queued: Vec<String>,
     /// Jobs currently being processed by workers
     pub running: Vec<String>,
-    /// Jobs scheduled to run at a future time
-    pub scheduled: Vec<String>,
     /// Jobs that have been explicitly canceled
     pub canceled: Vec<String>,
     /// Jobs that are ready to be harvested; completed but not post-processed
@@ -272,12 +272,12 @@ pub struct MapStatusToJobId {
 
 #[derive(Debug, Clone, Default)]
 pub struct MapStatusToJobMetadata {
+    /// Jobs postponed for running at a future time
+    pub postponed: Vec<JobMetadata>,
     /// Jobs in waiting to be processed
     pub queued: Vec<JobMetadata>,
     /// Jobs currently being processed by workers
     pub running: Vec<JobMetadata>,
-    /// Jobs scheduled to run at a future time
-    pub scheduled: Vec<JobMetadata>,
     /// Jobs that have been explicitly canceled
     pub canceled: Vec<JobMetadata>,
     /// Jobs that are ready to be harvested; completed but not post-processed

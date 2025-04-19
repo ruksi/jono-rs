@@ -46,16 +46,16 @@ impl Producer {
             .query_async(&mut conn)
             .await?;
 
-        let scheduled_for = job_plan.get_scheduled_for();
-        if scheduled_for > 0 && scheduled_for > now {
+        let postponed_to = job_plan.get_postponed_to();
+        if postponed_to > 0 && postponed_to > now {
             let _: () = conn
-                .zadd::<_, _, _, ()>(keys.scheduled_set(), &job_id, scheduled_for)
+                .zadd::<_, _, _, ()>(keys.postponed_set(), &job_id, postponed_to)
                 .await?;
 
             info!(
                 job_id = %job_id,
-                scheduled_for = %job_plan.get_scheduled_for(),
-                "Job scheduled for later execution"
+                postponed_to = %job_plan.get_postponed_to(),
+                "Job postponed for later execution"
             );
         } else {
             let _: () = conn
@@ -85,11 +85,11 @@ impl Producer {
         }
 
         #[rustfmt::skip]
-        let (removed_from_queued, removed_from_scheduled, last_heartbeat): (u32, u32, Option<i64>) =
+        let (removed_from_postponed, removed_from_queued, last_heartbeat): (u32, u32, Option<i64>) =
             redis::pipe()
                 .atomic()
+                .zrem(keys.postponed_set(), job_id)
                 .zrem(keys.queued_set(), job_id)
-                .zrem(keys.scheduled_set(), job_id)
                 .zscore(keys.running_set(), job_id)
                 .query_async(&mut conn)
                 .await?;
@@ -107,7 +107,7 @@ impl Producer {
             return Ok(true);
         }
 
-        if removed_from_queued > 0 || removed_from_scheduled > 0 {
+        if removed_from_queued > 0 || removed_from_postponed > 0 {
             let _: () = conn
                 .zadd::<_, _, _, ()>(keys.canceled_set(), job_id, now)
                 .await?;
@@ -126,9 +126,9 @@ impl Producer {
         #[rustfmt::skip]
         let (metadata_deleted,): (u32,) = redis::pipe()
             .atomic()
+            .zrem(keys.postponed_set(), job_id).ignore()
             .zrem(keys.queued_set(), job_id).ignore()
             .zrem(keys.running_set(), job_id).ignore()
-            .zrem(keys.scheduled_set(), job_id).ignore()
             .zrem(keys.canceled_set(), job_id).ignore()
             .zrem(keys.harvestable_set(), job_id).ignore()
             .del(keys.job_metadata_hash(job_id))

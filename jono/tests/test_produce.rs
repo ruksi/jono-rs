@@ -27,7 +27,7 @@ async fn test_submit_job() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_submit_scheduled_job() -> Result<()> {
+async fn test_submit_postponed_job() -> Result<()> {
     let context = create_test_context();
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
@@ -36,7 +36,7 @@ async fn test_submit_scheduled_job() -> Result<()> {
     let future_time = current_timestamp_ms() + 10000;
     let job_id = JobPlan::new()
         .payload(payload)
-        .scheduled_for(future_time)
+        .postponed_to(future_time)
         .submit(&producer)
         .await?;
 
@@ -44,7 +44,7 @@ async fn test_submit_scheduled_job() -> Result<()> {
     inspector.get_job_metadata(&job_id).await?;
     assert_eq!(
         inspector.get_job_status(&job_id).await?,
-        JobStatus::Scheduled
+        JobStatus::Postponed
     );
 
     producer.clean_job(&job_id).await?;

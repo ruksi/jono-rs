@@ -5,6 +5,8 @@ use std::str::FromStr;
 /// All the possible states that a job can be in
 #[derive(Debug, Clone, Copy, PartialEq, Eq, Hash, Serialize, Deserialize)]
 pub enum JobStatus {
+    /// The job is postponed to run at a future time.
+    Postponed,
     /// The job is queued and waiting to be processed.
     Queued,
     /// The job is currently being processed by a worker.
@@ -15,19 +17,17 @@ pub enum JobStatus {
     Failed,
     /// The job has been specifically canceled.
     Canceled,
-    /// The job is scheduled to run at a future time.
-    Scheduled,
 }
 
 impl Display for JobStatus {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         let str = match self {
+            JobStatus::Postponed => "postponed".to_string(),
             JobStatus::Queued => "queued".to_string(),
             JobStatus::Running => "running".to_string(),
             JobStatus::Harvestable => "harvestable".to_string(),
             JobStatus::Failed => "failed".to_string(),
             JobStatus::Canceled => "canceled".to_string(),
-            JobStatus::Scheduled => "scheduled".to_string(),
         };
         write!(f, "{}", str)
     }
@@ -37,12 +37,12 @@ impl FromStr for JobStatus {
     type Err = String;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         match s {
+            "postponed" => Ok(JobStatus::Postponed),
             "queued" => Ok(JobStatus::Queued),
             "running" => Ok(JobStatus::Running),
             "harvestable" => Ok(JobStatus::Harvestable),
             "failed" => Ok(JobStatus::Failed),
             "canceled" => Ok(JobStatus::Canceled),
-            "scheduled" => Ok(JobStatus::Scheduled),
             _ => Err(format!("Unknown job status: {}", s)),
         }
     }

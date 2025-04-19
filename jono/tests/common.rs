@@ -23,9 +23,9 @@ impl JobFixture {
         let metadata_key = keys.job_metadata_hash(&job_id);
 
         let set_key = match status {
+            JobStatus::Postponed => keys.postponed_set(),
             JobStatus::Queued => keys.queued_set(),
             JobStatus::Running => keys.running_set(),
-            JobStatus::Scheduled => keys.scheduled_set(),
             JobStatus::Canceled => keys.canceled_set(),
             JobStatus::Harvestable => keys.harvestable_set(),
             _ => {
@@ -74,9 +74,9 @@ impl JobFixture {
         #[rustfmt::skip]
         let _: () = redis::pipe()
             .atomic()
+            .cmd("DEL").arg(keys.postponed_set())
             .cmd("DEL").arg(keys.queued_set())
             .cmd("DEL").arg(keys.running_set())
-            .cmd("DEL").arg(keys.scheduled_set())
             .cmd("DEL").arg(keys.canceled_set())
             .cmd("DEL").arg(keys.harvestable_set())
             .cmd("DEL").arg(keys.job_metadata_hash(&self.job_id))
