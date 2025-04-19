@@ -26,7 +26,7 @@ impl JobFixture {
             JobStatus::Postponed => keys.postponed_set(),
             JobStatus::Queued => keys.queued_set(),
             JobStatus::Running => keys.running_set(),
-            JobStatus::Canceled => keys.canceled_set(),
+            JobStatus::Aborted => keys.aborted_set(),
             JobStatus::Harvestable => keys.harvestable_set(),
             _ => {
                 return Err(JonoError::InvalidJob(
@@ -77,7 +77,7 @@ impl JobFixture {
             .cmd("DEL").arg(keys.postponed_set())
             .cmd("DEL").arg(keys.queued_set())
             .cmd("DEL").arg(keys.running_set())
-            .cmd("DEL").arg(keys.canceled_set())
+            .cmd("DEL").arg(keys.aborted_set())
             .cmd("DEL").arg(keys.harvestable_set())
             .cmd("DEL").arg(keys.job_metadata_hash(&self.job_id))
             .query(&mut conn)?;

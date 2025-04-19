@@ -68,7 +68,7 @@ async fn test_cancel_job() -> Result<()> {
     inspector.get_job_metadata(&job_id).await?;
     assert_eq!(
         inspector.get_job_status(&job_id).await?,
-        JobStatus::Canceled
+        JobStatus::Aborted
     );
 
     producer.clean_job(&job_id).await?;

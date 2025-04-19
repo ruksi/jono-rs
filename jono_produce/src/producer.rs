@@ -97,7 +97,7 @@ impl Producer {
         if last_heartbeat.is_some() {
             let grace_end = now + grace_period_ms;
             let _: () = conn
-                .zadd::<_, _, _, ()>(keys.canceled_set(), job_id, grace_end)
+                .zadd::<_, _, _, ()>(keys.aborted_set(), job_id, grace_end)
                 .await?;
             info!(
                 job_id = %job_id,
@@ -109,7 +109,7 @@ impl Producer {
 
         if removed_from_queued > 0 || removed_from_postponed > 0 {
             let _: () = conn
-                .zadd::<_, _, _, ()>(keys.canceled_set(), job_id, now)
+                .zadd::<_, _, _, ()>(keys.aborted_set(), job_id, now)
                 .await?;
             info!(job_id = %job_id, "Job canceled successfully");
             return Ok(true);
@@ -129,7 +129,7 @@ impl Producer {
             .zrem(keys.postponed_set(), job_id).ignore()
             .zrem(keys.queued_set(), job_id).ignore()
             .zrem(keys.running_set(), job_id).ignore()
-            .zrem(keys.canceled_set(), job_id).ignore()
+            .zrem(keys.aborted_set(), job_id).ignore()
             .zrem(keys.harvestable_set(), job_id).ignore()
             .del(keys.job_metadata_hash(job_id))
             .query_async(&mut conn)

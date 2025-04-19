@@ -100,7 +100,7 @@ impl<W: Worker> Consumer<W> {
         if !inspector.job_exists(&workload.job_id).await? {
             return Ok(WorkSummary::Failure("Job no longer exists".to_string()));
         }
-        if inspector.job_is_canceled(&workload.job_id).await? {
+        if inspector.is_job_aborted(&workload.job_id).await? {
             return Ok(WorkSummary::Failure("Job was canceled".to_string()));
         }
 

@@ -25,11 +25,11 @@ impl Inspector {
         Ok(exists)
     }
 
-    pub async fn job_is_canceled(&self, job_id: &str) -> Result<bool> {
+    pub async fn is_job_aborted(&self, job_id: &str) -> Result<bool> {
         let mut conn = self.get_connection().await?;
         let keys = self.context.keys();
 
-        let score: Option<i64> = conn.zscore(keys.canceled_set(), job_id).await?;
+        let score: Option<i64> = conn.zscore(keys.aborted_set(), job_id).await?;
 
         Ok(score.is_some())
     }
@@ -67,12 +67,12 @@ impl Inspector {
             return Ok(JobStatus::Postponed);
         }
 
-        let in_canceled_set: bool = conn
-            .zscore::<_, _, Option<i64>>(keys.canceled_set(), job_id)
+        let in_aborted_set: bool = conn
+            .zscore::<_, _, Option<i64>>(keys.aborted_set(), job_id)
             .await?
             .is_some();
-        if in_canceled_set {
-            return Ok(JobStatus::Canceled);
+        if in_aborted_set {
+            return Ok(JobStatus::Aborted);
         }
 
         let has_completed_at_field: Option<String> = conn
@@ -129,7 +129,7 @@ impl Inspector {
                 JobStatus::Postponed,
                 JobStatus::Queued,
                 JobStatus::Running,
-                JobStatus::Canceled,
+                JobStatus::Aborted,
                 JobStatus::Harvestable,
             ],
         };
@@ -158,9 +158,9 @@ impl Inspector {
                     pipe.zrange(keys.running_set(), 0, -1);
                     status_to_index.push(JobStatus::Running);
                 }
-                JobStatus::Canceled => {
-                    pipe.zrange(keys.canceled_set(), 0, -1);
-                    status_to_index.push(JobStatus::Canceled);
+                JobStatus::Aborted => {
+                    pipe.zrange(keys.aborted_set(), 0, -1);
+                    status_to_index.push(JobStatus::Aborted);
                 }
                 JobStatus::Harvestable => {
                     pipe.zrange(keys.harvestable_set(), 0, -1);
@@ -183,7 +183,7 @@ impl Inspector {
                     JobStatus::Postponed => map.postponed = std::mem::take(&mut result[i]),
                     JobStatus::Queued => map.queued = std::mem::take(&mut result[i]),
                     JobStatus::Running => map.running = std::mem::take(&mut result[i]),
-                    JobStatus::Canceled => map.canceled = std::mem::take(&mut result[i]),
+                    JobStatus::Aborted => map.aborted = std::mem::take(&mut result[i]),
                     JobStatus::Harvestable => map.harvestable = std::mem::take(&mut result[i]),
                     JobStatus::Failed => {} // TODO: wait for the deadletter implementation
                 }
@@ -223,7 +223,7 @@ impl Inspector {
                 postponed: process(&status_to_job_ids.postponed).await,
                 queued: process(&status_to_job_ids.queued).await,
                 running: process(&status_to_job_ids.running).await,
-                canceled: process(&status_to_job_ids.canceled).await,
+                aborted: process(&status_to_job_ids.aborted).await,
                 harvestable: process(&status_to_job_ids.harvestable).await,
             });
         };
@@ -236,7 +236,7 @@ impl Inspector {
                 Postponed => result.postponed = process(&status_to_job_ids.postponed).await,
                 Queued => result.queued = process(&status_to_job_ids.queued).await,
                 Running => result.running = process(&status_to_job_ids.running).await,
-                Canceled => result.canceled = process(&status_to_job_ids.canceled).await,
+                Aborted => result.aborted = process(&status_to_job_ids.aborted).await,
                 Harvestable => result.harvestable = process(&status_to_job_ids.harvestable).await,
                 Failed => {} // TODO: wait for the deadletter implementation
             }
@@ -265,7 +265,7 @@ pub struct MapStatusToJobId {
     /// Jobs currently being processed by workers
     pub running: Vec<String>,
     /// Jobs that have been explicitly canceled
-    pub canceled: Vec<String>,
+    pub aborted: Vec<String>,
     /// Jobs that are ready to be harvested; completed but not post-processed
     pub harvestable: Vec<String>,
 }
@@ -279,7 +279,7 @@ pub struct MapStatusToJobMetadata {
     /// Jobs currently being processed by workers
     pub running: Vec<JobMetadata>,
     /// Jobs that have been explicitly canceled
-    pub canceled: Vec<JobMetadata>,
+    pub aborted: Vec<JobMetadata>,
     /// Jobs that are ready to be harvested; completed but not post-processed
     pub harvestable: Vec<JobMetadata>,
 }

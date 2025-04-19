@@ -35,8 +35,8 @@ impl Keys {
     }
 
     /// Redis key for the sorted set that communicates which jobs have been canceled with grace period timestamps as scores
-    pub fn canceled_set(&self) -> String {
-        format!("{}:{{{}}}:canceled", self.prefix, self.topic)
+    pub fn aborted_set(&self) -> String {
+        format!("{}:{{{}}}:aborted", self.prefix, self.topic)
     }
 
     /// Redis key for the sorted set that holds harvestable jobs (not post-processed but completed)
