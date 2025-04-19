@@ -39,6 +39,7 @@ impl JobFixture {
 
         #[rustfmt::skip]
         let _: () = redis::pipe()
+            .atomic()
             .zadd(&set_key, &job_id, score)
             .hset(&metadata_key, "id", &job_id)
             .hset(&metadata_key, "payload", "{}")
@@ -72,6 +73,7 @@ impl JobFixture {
 
         #[rustfmt::skip]
         let _: () = redis::pipe()
+            .atomic()
             .cmd("DEL").arg(keys.queued_set())
             .cmd("DEL").arg(keys.running_set())
             .cmd("DEL").arg(keys.scheduled_set())

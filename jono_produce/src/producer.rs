@@ -23,6 +23,7 @@ impl Producer {
         let metadata_key = keys.job_metadata_hash(&job_id);
 
         let _: () = redis::pipe()
+            .atomic()
             .hset(&metadata_key, "id", &job_id)
             .hset(
                 &metadata_key,
@@ -86,6 +87,7 @@ impl Producer {
         #[rustfmt::skip]
         let (removed_from_queued, removed_from_scheduled, last_heartbeat): (u32, u32, Option<i64>) =
             redis::pipe()
+                .atomic()
                 .zrem(keys.queued_set(), job_id)
                 .zrem(keys.scheduled_set(), job_id)
                 .zscore(keys.running_set(), job_id)
@@ -123,6 +125,7 @@ impl Producer {
 
         #[rustfmt::skip]
         let (metadata_deleted,): (u32,) = redis::pipe()
+            .atomic()
             .zrem(keys.queued_set(), job_id).ignore()
             .zrem(keys.running_set(), job_id).ignore()
             .zrem(keys.scheduled_set(), job_id).ignore()

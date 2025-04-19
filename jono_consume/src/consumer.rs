@@ -85,6 +85,7 @@ impl<W: Worker> Consumer<W> {
         let metadata_key = keys.job_metadata_hash(job_id);
 
         let _: () = redis::pipe()
+            .atomic()
             .zadd(keys.running_set(), job_id, expiry)
             .hset(&metadata_key, "status", "running")
             .hset(&metadata_key, "started_at", now.to_string())
@@ -136,6 +137,7 @@ impl<W: Worker> Consumer<W> {
         let expiry_time_score = now + ttl_ms;
 
         let _: () = redis::pipe()
+            .atomic()
             .zrem(keys.running_set(), job_id)
             .zadd(keys.harvestable_set(), job_id, expiry_time_score)
             .hset(&metadata_key, "status", "completed")
