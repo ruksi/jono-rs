@@ -43,12 +43,12 @@ impl Inspector {
             return Err(JonoError::JobNotFound(job_id.to_string()));
         }
 
-        let in_running_set: bool = conn
-            .zscore::<_, _, Option<i64>>(keys.running_set(), job_id)
+        let in_started_set: bool = conn
+            .zscore::<_, _, Option<i64>>(keys.started_set(), job_id)
             .await?
             .is_some();
-        if in_running_set {
-            return Ok(JobStatus::Running);
+        if in_started_set {
+            return Ok(JobStatus::Started);
         }
 
         let in_queued_set: bool = conn
@@ -128,7 +128,7 @@ impl Inspector {
             None => &[
                 JobStatus::Postponed,
                 JobStatus::Queued,
-                JobStatus::Running,
+                JobStatus::Started,
                 JobStatus::Aborted,
                 JobStatus::Harvestable,
             ],
@@ -154,9 +154,9 @@ impl Inspector {
                     pipe.zrange(keys.queued_set(), 0, -1);
                     status_to_index.push(JobStatus::Queued);
                 }
-                JobStatus::Running => {
-                    pipe.zrange(keys.running_set(), 0, -1);
-                    status_to_index.push(JobStatus::Running);
+                JobStatus::Started => {
+                    pipe.zrange(keys.started_set(), 0, -1);
+                    status_to_index.push(JobStatus::Started);
                 }
                 JobStatus::Aborted => {
                     pipe.zrange(keys.aborted_set(), 0, -1);
@@ -182,7 +182,7 @@ impl Inspector {
                 match status {
                     JobStatus::Postponed => map.postponed = std::mem::take(&mut result[i]),
                     JobStatus::Queued => map.queued = std::mem::take(&mut result[i]),
-                    JobStatus::Running => map.running = std::mem::take(&mut result[i]),
+                    JobStatus::Started => map.started = std::mem::take(&mut result[i]),
                     JobStatus::Aborted => map.aborted = std::mem::take(&mut result[i]),
                     JobStatus::Harvestable => map.harvestable = std::mem::take(&mut result[i]),
                     JobStatus::Failed => {} // TODO: wait for the deadletter implementation
@@ -222,7 +222,7 @@ impl Inspector {
             return Ok(MapStatusToJobMetadata {
                 postponed: process(&status_to_job_ids.postponed).await,
                 queued: process(&status_to_job_ids.queued).await,
-                running: process(&status_to_job_ids.running).await,
+                started: process(&status_to_job_ids.started).await,
                 aborted: process(&status_to_job_ids.aborted).await,
                 harvestable: process(&status_to_job_ids.harvestable).await,
             });
@@ -235,7 +235,7 @@ impl Inspector {
             match state {
                 Postponed => result.postponed = process(&status_to_job_ids.postponed).await,
                 Queued => result.queued = process(&status_to_job_ids.queued).await,
-                Running => result.running = process(&status_to_job_ids.running).await,
+                Started => result.started = process(&status_to_job_ids.started).await,
                 Aborted => result.aborted = process(&status_to_job_ids.aborted).await,
                 Harvestable => result.harvestable = process(&status_to_job_ids.harvestable).await,
                 Failed => {} // TODO: wait for the deadletter implementation
@@ -263,7 +263,7 @@ pub struct MapStatusToJobId {
     /// Jobs in waiting to be processed
     pub queued: Vec<String>,
     /// Jobs currently being processed by workers
-    pub running: Vec<String>,
+    pub started: Vec<String>,
     /// Jobs that have been explicitly canceled
     pub aborted: Vec<String>,
     /// Jobs that are ready to be harvested; completed but not post-processed
@@ -277,7 +277,7 @@ pub struct MapStatusToJobMetadata {
     /// Jobs in waiting to be processed
     pub queued: Vec<JobMetadata>,
     /// Jobs currently being processed by workers
-    pub running: Vec<JobMetadata>,
+    pub started: Vec<JobMetadata>,
     /// Jobs that have been explicitly canceled
     pub aborted: Vec<JobMetadata>,
     /// Jobs that are ready to be harvested; completed but not post-processed

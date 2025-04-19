@@ -25,7 +25,7 @@ impl JobFixture {
         let set_key = match status {
             JobStatus::Postponed => keys.postponed_set(),
             JobStatus::Queued => keys.queued_set(),
-            JobStatus::Running => keys.running_set(),
+            JobStatus::Started => keys.started_set(),
             JobStatus::Aborted => keys.aborted_set(),
             JobStatus::Harvestable => keys.harvestable_set(),
             _ => {
@@ -76,7 +76,7 @@ impl JobFixture {
             .atomic()
             .cmd("DEL").arg(keys.postponed_set())
             .cmd("DEL").arg(keys.queued_set())
-            .cmd("DEL").arg(keys.running_set())
+            .cmd("DEL").arg(keys.started_set())
             .cmd("DEL").arg(keys.aborted_set())
             .cmd("DEL").arg(keys.harvestable_set())
             .cmd("DEL").arg(keys.job_metadata_hash(&self.job_id))

@@ -30,8 +30,8 @@ impl Keys {
     }
 
     /// Redis key for the sorted set that holds running jobs with heartbeat timestamps as scores
-    pub fn running_set(&self) -> String {
-        format!("{}:{{{}}}:running", self.prefix, self.topic)
+    pub fn started_set(&self) -> String {
+        format!("{}:{{{}}}:started", self.prefix, self.topic)
     }
 
     /// Redis key for the sorted set that communicates which jobs have been canceled with grace period timestamps as scores

@@ -90,7 +90,7 @@ impl Producer {
                 .atomic()
                 .zrem(keys.postponed_set(), job_id)
                 .zrem(keys.queued_set(), job_id)
-                .zscore(keys.running_set(), job_id)
+                .zscore(keys.started_set(), job_id)
                 .query_async(&mut conn)
                 .await?;
 
@@ -128,7 +128,7 @@ impl Producer {
             .atomic()
             .zrem(keys.postponed_set(), job_id).ignore()
             .zrem(keys.queued_set(), job_id).ignore()
-            .zrem(keys.running_set(), job_id).ignore()
+            .zrem(keys.started_set(), job_id).ignore()
             .zrem(keys.aborted_set(), job_id).ignore()
             .zrem(keys.harvestable_set(), job_id).ignore()
             .del(keys.job_metadata_hash(job_id))

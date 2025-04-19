@@ -70,14 +70,14 @@ impl<W: Worker> Consumer<W> {
             let inspector = Inspector::with_context(self.context.clone());
             let metadata = inspector.get_job_metadata(job_id).await?;
             let workload = Workload::from_metadata(metadata);
-            self.mark_job_running(job_id).await?;
+            self.mark_job_as_started(job_id).await?;
             Ok(Some(workload))
         } else {
             Ok(None)
         }
     }
 
-    async fn mark_job_running(&self, job_id: &str) -> Result<()> {
+    async fn mark_job_as_started(&self, job_id: &str) -> Result<()> {
         let mut conn = self.get_connection().await?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
@@ -86,8 +86,8 @@ impl<W: Worker> Consumer<W> {
 
         let _: () = redis::pipe()
             .atomic()
-            .zadd(keys.running_set(), job_id, expiry)
-            .hset(&metadata_key, "status", "running")
+            .zadd(keys.started_set(), job_id, expiry)
+            .hset(&metadata_key, "status", "started")
             .hset(&metadata_key, "started_at", now.to_string())
             .query_async(&mut conn)
             .await?;
@@ -138,7 +138,7 @@ impl<W: Worker> Consumer<W> {
 
         let _: () = redis::pipe()
             .atomic()
-            .zrem(keys.running_set(), job_id)
+            .zrem(keys.started_set(), job_id)
             .zadd(keys.harvestable_set(), job_id, expiry_time_score)
             .hset(&metadata_key, "status", "completed")
             .hset(&metadata_key, "completed_at", now.to_string())

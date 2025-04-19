@@ -10,7 +10,7 @@ pub enum JobStatus {
     /// The job is queued and waiting to be processed.
     Queued,
     /// The job is currently being processed by a worker.
-    Running,
+    Started,
     /// The job has been completed successfully.
     Harvestable,
     /// The job has failed to complete after specified retries.
@@ -24,7 +24,7 @@ impl Display for JobStatus {
         let str = match self {
             JobStatus::Postponed => "postponed".to_string(),
             JobStatus::Queued => "queued".to_string(),
-            JobStatus::Running => "running".to_string(),
+            JobStatus::Started => "started".to_string(),
             JobStatus::Harvestable => "harvestable".to_string(),
             JobStatus::Failed => "failed".to_string(),
             JobStatus::Aborted => "aborted".to_string(),
@@ -39,7 +39,7 @@ impl FromStr for JobStatus {
         match s {
             "postponed" => Ok(JobStatus::Postponed),
             "queued" => Ok(JobStatus::Queued),
-            "running" => Ok(JobStatus::Running),
+            "started" => Ok(JobStatus::Started),
             "harvestable" => Ok(JobStatus::Harvestable),
             "failed" => Ok(JobStatus::Failed),
             "aborted" => Ok(JobStatus::Aborted),

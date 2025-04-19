@@ -29,7 +29,7 @@ async fn test_job_maps_on_all() -> Result<()> {
     let now = current_timestamp_ms();
     let postpone_fix = JobFixture::new(context.clone(), JobStatus::Postponed, now + 60000).await?;
     let queue_fix = JobFixture::new(context.clone(), JobStatus::Queued, 0).await?;
-    let run_fix = JobFixture::new(context.clone(), JobStatus::Running, now + 10000).await?;
+    let start_fix = JobFixture::new(context.clone(), JobStatus::Started, now + 10000).await?;
     let abort_fix = JobFixture::new(context.clone(), JobStatus::Aborted, now + 30000).await?;
     let harvest_fix = JobFixture::new(context.clone(), JobStatus::Harvestable, now).await?;
 
@@ -42,13 +42,13 @@ async fn test_job_maps_on_all() -> Result<()> {
 
     assert_eq!(job_ids.postponed, vec![postpone_fix.job_id.clone()]);
     assert_eq!(job_ids.queued, vec![queue_fix.job_id.clone()]);
-    assert_eq!(job_ids.running, vec![run_fix.job_id.clone()]);
+    assert_eq!(job_ids.started, vec![start_fix.job_id.clone()]);
     assert_eq!(job_ids.aborted, vec![abort_fix.job_id.clone()]);
     assert_eq!(job_ids.harvestable, vec![harvest_fix.job_id.clone()]);
 
     assert_eq!(job_metadatas.postponed.len(), 1);
     assert_eq!(job_metadatas.queued.len(), 1);
-    assert_eq!(job_metadatas.running.len(), 1);
+    assert_eq!(job_metadatas.started.len(), 1);
     assert_eq!(job_metadatas.aborted.len(), 1);
     assert_eq!(job_metadatas.harvestable.len(), 1);
 
@@ -71,13 +71,13 @@ async fn test_job_maps_on_queued() -> Result<()> {
 
     assert!(job_ids.postponed.is_empty());
     assert_eq!(job_ids.queued, vec![queue_fix.job_id.clone()]);
-    assert!(job_ids.running.is_empty());
+    assert!(job_ids.started.is_empty());
     assert!(job_ids.aborted.is_empty());
     assert!(job_ids.harvestable.is_empty());
 
     assert_eq!(job_metadatas.postponed.len(), 0);
     assert_eq!(job_metadatas.queued.len(), 1);
-    assert_eq!(job_metadatas.running.len(), 0);
+    assert_eq!(job_metadatas.started.len(), 0);
     assert_eq!(job_metadatas.aborted.len(), 0);
     assert_eq!(job_metadatas.harvestable.len(), 0);
 
@@ -85,12 +85,12 @@ async fn test_job_maps_on_queued() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_job_maps_on_running() -> Result<()> {
+async fn test_job_maps_on_started() -> Result<()> {
     let context = create_test_context();
     let inspector = Inspector::with_context(context.clone());
 
     let now = current_timestamp_ms();
-    let run_fix = JobFixture::new(context.clone(), JobStatus::Running, now + 10000).await?;
+    let start_fix = JobFixture::new(context.clone(), JobStatus::Started, now + 10000).await?;
 
     let job_ids = inspector
         .get_status_to_job_ids(JobFilter::default())
@@ -101,13 +101,13 @@ async fn test_job_maps_on_running() -> Result<()> {
 
     assert!(job_ids.postponed.is_empty());
     assert!(job_ids.queued.is_empty());
-    assert_eq!(job_ids.running, vec![run_fix.job_id.clone()]);
+    assert_eq!(job_ids.started, vec![start_fix.job_id.clone()]);
     assert!(job_ids.aborted.is_empty());
     assert!(job_ids.harvestable.is_empty());
 
     assert_eq!(job_metadatas.postponed.len(), 0);
     assert_eq!(job_metadatas.queued.len(), 0);
-    assert_eq!(job_metadatas.running.len(), 1);
+    assert_eq!(job_metadatas.started.len(), 1);
     assert_eq!(job_metadatas.aborted.len(), 0);
     assert_eq!(job_metadatas.harvestable.len(), 0);
 
@@ -131,13 +131,13 @@ async fn test_job_map_on_postponed() -> Result<()> {
 
     assert_eq!(job_ids.postponed, vec![postpone_fix.job_id.clone()]);
     assert!(job_ids.queued.is_empty());
-    assert!(job_ids.running.is_empty());
+    assert!(job_ids.started.is_empty());
     assert!(job_ids.aborted.is_empty());
     assert!(job_ids.harvestable.is_empty());
 
     assert_eq!(job_metadatas.postponed.len(), 1);
     assert_eq!(job_metadatas.queued.len(), 0);
-    assert_eq!(job_metadatas.running.len(), 0);
+    assert_eq!(job_metadatas.started.len(), 0);
     assert_eq!(job_metadatas.aborted.len(), 0);
     assert_eq!(job_metadatas.harvestable.len(), 0);
 
@@ -161,13 +161,13 @@ async fn test_job_maps_on_aborted() -> Result<()> {
 
     assert!(job_ids.postponed.is_empty());
     assert!(job_ids.queued.is_empty());
-    assert!(job_ids.running.is_empty());
+    assert!(job_ids.started.is_empty());
     assert_eq!(job_ids.aborted, vec![cancel_fix.job_id.clone()]);
     assert!(job_ids.harvestable.is_empty());
 
     assert_eq!(job_metadatas.postponed.len(), 0);
     assert_eq!(job_metadatas.queued.len(), 0);
-    assert_eq!(job_metadatas.running.len(), 0);
+    assert_eq!(job_metadatas.started.len(), 0);
     assert_eq!(job_metadatas.aborted.len(), 1);
     assert_eq!(job_metadatas.harvestable.len(), 0);
 
@@ -191,13 +191,13 @@ async fn test_job_maps_on_harvestable() -> Result<()> {
 
     assert!(job_ids.postponed.is_empty());
     assert!(job_ids.queued.is_empty());
-    assert!(job_ids.running.is_empty());
+    assert!(job_ids.started.is_empty());
     assert!(job_ids.aborted.is_empty());
     assert_eq!(job_ids.harvestable, vec![harvest_fix.job_id.clone()]);
 
     assert_eq!(job_metadatas.postponed.len(), 0);
     assert_eq!(job_metadatas.queued.len(), 0);
-    assert_eq!(job_metadatas.running.len(), 0);
+    assert_eq!(job_metadatas.started.len(), 0);
     assert_eq!(job_metadatas.aborted.len(), 0);
     assert_eq!(job_metadatas.harvestable.len(), 1);
 
