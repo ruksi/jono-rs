@@ -130,7 +130,7 @@ impl Producer {
             .zrem(keys.queued_set(), job_id).ignore()
             .zrem(keys.started_set(), job_id).ignore()
             .zrem(keys.aborted_set(), job_id).ignore()
-            .zrem(keys.harvestable_set(), job_id).ignore()
+            .zrem(keys.completed_set(), job_id).ignore()
             .del(keys.job_metadata_hash(job_id))
             .query_async(&mut conn)
             .await?;

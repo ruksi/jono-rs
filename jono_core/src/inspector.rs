@@ -79,7 +79,7 @@ impl Inspector {
             .hget(keys.job_metadata_hash(job_id), "completed_at")
             .await?;
         if has_completed_at_field.is_some() {
-            return Ok(JobStatus::Harvestable);
+            return Ok(JobStatus::Completed);
         }
 
         let attempt_history: Option<String> = conn
@@ -96,12 +96,12 @@ impl Inspector {
                     .unwrap_or(3);
 
                 if attempts.len() >= max_attempts as usize {
-                    return Ok(JobStatus::Failed);
+                    return Ok(JobStatus::Perished);
                 }
             }
         }
 
-        Ok(JobStatus::Failed)
+        Ok(JobStatus::Perished)
     }
 
     pub async fn get_job_metadata(&self, job_id: &str) -> Result<JobMetadata> {
@@ -130,7 +130,7 @@ impl Inspector {
                 JobStatus::Queued,
                 JobStatus::Started,
                 JobStatus::Aborted,
-                JobStatus::Harvestable,
+                JobStatus::Completed,
             ],
         };
 
@@ -162,11 +162,11 @@ impl Inspector {
                     pipe.zrange(keys.aborted_set(), 0, -1);
                     status_to_index.push(JobStatus::Aborted);
                 }
-                JobStatus::Harvestable => {
-                    pipe.zrange(keys.harvestable_set(), 0, -1);
-                    status_to_index.push(JobStatus::Harvestable);
+                JobStatus::Completed => {
+                    pipe.zrange(keys.completed_set(), 0, -1);
+                    status_to_index.push(JobStatus::Completed);
                 }
-                JobStatus::Failed => {} // TODO: wait for the deadletter implementation
+                JobStatus::Perished => {} // TODO: wait for the deadletter implementation
             }
         }
 
@@ -184,8 +184,8 @@ impl Inspector {
                     JobStatus::Queued => map.queued = std::mem::take(&mut result[i]),
                     JobStatus::Started => map.started = std::mem::take(&mut result[i]),
                     JobStatus::Aborted => map.aborted = std::mem::take(&mut result[i]),
-                    JobStatus::Harvestable => map.harvestable = std::mem::take(&mut result[i]),
-                    JobStatus::Failed => {} // TODO: wait for the deadletter implementation
+                    JobStatus::Completed => map.completed = std::mem::take(&mut result[i]),
+                    JobStatus::Perished => {} // TODO: wait for the deadletter implementation
                 }
             }
         }
@@ -224,7 +224,7 @@ impl Inspector {
                 queued: process(&status_to_job_ids.queued).await,
                 started: process(&status_to_job_ids.started).await,
                 aborted: process(&status_to_job_ids.aborted).await,
-                harvestable: process(&status_to_job_ids.harvestable).await,
+                completed: process(&status_to_job_ids.completed).await,
             });
         };
 
@@ -237,8 +237,8 @@ impl Inspector {
                 Queued => result.queued = process(&status_to_job_ids.queued).await,
                 Started => result.started = process(&status_to_job_ids.started).await,
                 Aborted => result.aborted = process(&status_to_job_ids.aborted).await,
-                Harvestable => result.harvestable = process(&status_to_job_ids.harvestable).await,
-                Failed => {} // TODO: wait for the deadletter implementation
+                Completed => result.completed = process(&status_to_job_ids.completed).await,
+                Perished => {} // TODO: wait for the deadletter implementation
             }
         }
 
@@ -267,7 +267,7 @@ pub struct MapStatusToJobId {
     /// Jobs that have been explicitly canceled
     pub aborted: Vec<String>,
     /// Jobs that are ready to be harvested; completed but not post-processed
-    pub harvestable: Vec<String>,
+    pub completed: Vec<String>,
 }
 
 #[derive(Debug, Clone, Default)]
@@ -281,5 +281,5 @@ pub struct MapStatusToJobMetadata {
     /// Jobs that have been explicitly canceled
     pub aborted: Vec<JobMetadata>,
     /// Jobs that are ready to be harvested; completed but not post-processed
-    pub harvestable: Vec<JobMetadata>,
+    pub completed: Vec<JobMetadata>,
 }

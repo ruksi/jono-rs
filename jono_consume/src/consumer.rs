@@ -139,7 +139,7 @@ impl<W: Worker> Consumer<W> {
         let _: () = redis::pipe()
             .atomic()
             .zrem(keys.started_set(), job_id)
-            .zadd(keys.harvestable_set(), job_id, expiry_time_score)
+            .zadd(keys.completed_set(), job_id, expiry_time_score)
             .hset(&metadata_key, "status", "completed")
             .hset(&metadata_key, "completed_at", now.to_string())
             .hset(&metadata_key, "work_summary", summ_json)

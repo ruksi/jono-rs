@@ -27,7 +27,7 @@ impl JobFixture {
             JobStatus::Queued => keys.queued_set(),
             JobStatus::Started => keys.started_set(),
             JobStatus::Aborted => keys.aborted_set(),
-            JobStatus::Harvestable => keys.harvestable_set(),
+            JobStatus::Completed => keys.completed_set(),
             _ => {
                 return Err(JonoError::InvalidJob(
                     "Cannot directly create this job type".to_string(),
@@ -78,7 +78,7 @@ impl JobFixture {
             .cmd("DEL").arg(keys.queued_set())
             .cmd("DEL").arg(keys.started_set())
             .cmd("DEL").arg(keys.aborted_set())
-            .cmd("DEL").arg(keys.harvestable_set())
+            .cmd("DEL").arg(keys.completed_set())
             .cmd("DEL").arg(keys.job_metadata_hash(&self.job_id))
             .query(&mut conn)?;
 

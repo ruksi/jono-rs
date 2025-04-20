@@ -95,8 +95,8 @@ pub async fn codebase_3() -> Result<()> {
 
     // to post-process job results:
     let harvester = Harvester::with_context(context);
-    let harvestables = harvester.harvest(3).await?;
-    // do something with the completed job payload and outcome
+    let completed_jobs = harvester.harvest(3).await?;
+    // do something with the completed job result
   
     // OR, use the `Reaper` trait approach, TODO
 }

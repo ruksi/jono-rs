@@ -45,13 +45,13 @@ async fn test_basics() -> Result<()> {
     assert!(matches!(work_summary, Some(WorkSummary::Success(_))));
 
     // it shouldn't be expired, yet
-    let expired_count = harvester.clean_expired_harvest().await?;
+    let expired_count = harvester.clean_expired_completed().await?;
     assert_eq!(expired_count, 0);
 
-    // you can pop the harvestables
-    let harvestables = harvester.harvest(3).await?;
-    assert_eq!(harvestables.len(), 1);
-    let job_metadata = harvestables.first().unwrap().clone();
+    // you can pop the completed jobs
+    let completed = harvester.harvest(3).await?;
+    assert_eq!(completed.len(), 1);
+    let job_metadata = completed.first().unwrap().clone();
     assert_eq!(job_metadata.payload, json!({"action": "test_action"}));
     assert_eq!(
         job_metadata.work_summary.unwrap(),
@@ -59,8 +59,8 @@ async fn test_basics() -> Result<()> {
     );
 
     // the single harvestable was processed already
-    let harvestables = harvester.harvest(1).await?;
-    assert_eq!(harvestables.len(), 0);
+    let completed = harvester.harvest(1).await?;
+    assert_eq!(completed.len(), 0);
 
     producer.clean_job(&job_id).await?;
     Ok(())
@@ -91,10 +91,9 @@ async fn test_reaping() -> Result<()> {
     let work_summary = consumer.run_next().await?;
     assert!(matches!(work_summary, Some(WorkSummary::Success(_))));
 
-    // the job should now be in the harvestable set,
+    // the job should now be in the completed set,
     // ready to be reaped
-    let reap_summaries = harvester.run_next_batch().await?;
-
+    let reap_summaries = harvester.reap_next_batch().await?;
     assert_eq!(reap_summaries.len(), 1);
     if let ReapSummary::Success(Some(data)) = &reap_summaries[0] {
         assert_eq!(data["reaped"], json!(true));

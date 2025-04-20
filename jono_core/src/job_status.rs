@@ -11,12 +11,12 @@ pub enum JobStatus {
     Queued,
     /// The job is currently being processed by a worker.
     Started,
-    /// The job has been completed successfully.
-    Harvestable,
-    /// The job has failed to complete after specified retries.
-    Failed,
     /// The job has been specifically canceled.
     Aborted,
+    /// The job has been completed successfully.
+    Completed,
+    /// The job has failed to complete after specified retries.
+    Perished,
 }
 
 impl Display for JobStatus {
@@ -25,9 +25,9 @@ impl Display for JobStatus {
             JobStatus::Postponed => "postponed".to_string(),
             JobStatus::Queued => "queued".to_string(),
             JobStatus::Started => "started".to_string(),
-            JobStatus::Harvestable => "harvestable".to_string(),
-            JobStatus::Failed => "failed".to_string(),
             JobStatus::Aborted => "aborted".to_string(),
+            JobStatus::Completed => "completed".to_string(),
+            JobStatus::Perished => "perished".to_string(),
         };
         write!(f, "{}", str)
     }
@@ -40,9 +40,9 @@ impl FromStr for JobStatus {
             "postponed" => Ok(JobStatus::Postponed),
             "queued" => Ok(JobStatus::Queued),
             "started" => Ok(JobStatus::Started),
-            "harvestable" => Ok(JobStatus::Harvestable),
-            "failed" => Ok(JobStatus::Failed),
             "aborted" => Ok(JobStatus::Aborted),
+            "completed" => Ok(JobStatus::Completed),
+            "perished" => Ok(JobStatus::Perished),
             _ => Err(format!("Unknown job status: {}", s)),
         }
     }

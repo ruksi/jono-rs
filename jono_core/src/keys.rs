@@ -39,9 +39,9 @@ impl Keys {
         format!("{}:{{{}}}:aborted", self.prefix, self.topic)
     }
 
-    /// Redis key for the sorted set that holds harvestable jobs (not post-processed but completed)
+    /// Redis key for the sorted set that holds completed jobs (not post-processed but completed)
     /// with expiry timestamps as scores
-    pub fn harvestable_set(&self) -> String {
-        format!("{}:{{{}}}:harvestable", self.prefix, self.topic)
+    pub fn completed_set(&self) -> String {
+        format!("{}:{{{}}}:completed", self.prefix, self.topic)
     }
 }

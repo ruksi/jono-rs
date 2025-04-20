@@ -36,7 +36,7 @@ async fn test_basics() -> Result<()> {
     assert_eq!(metadata.work_summary.unwrap(), json!({"processed": true}));
     assert_eq!(
         inspector.get_job_status(&job_id).await?,
-        JobStatus::Harvestable
+        JobStatus::Completed
     );
 
     producer.clean_job(&job_id).await?;

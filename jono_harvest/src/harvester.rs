@@ -24,11 +24,11 @@ impl<R: Reaper> Harvester<R> {
         self
     }
 
-    pub async fn run(&self) -> Result<()> {
+    pub async fn reap(&self) -> Result<()> {
         let mut consecutive_errors = 0;
 
         loop {
-            match self.run_next_batch().await {
+            match self.reap_next_batch().await {
                 Ok(reap_summaries) if !reap_summaries.is_empty() => {
                     consecutive_errors = 0;
                 }
@@ -49,7 +49,7 @@ impl<R: Reaper> Harvester<R> {
         }
     }
 
-    pub async fn run_next_batch(&self) -> Result<Vec<ReapSummary>> {
+    pub async fn reap_next_batch(&self) -> Result<Vec<ReapSummary>> {
         let harvested = self.harvest(self.config.get_batch_size()).await?;
         if harvested.is_empty() {
             return Ok(Vec::new());
@@ -73,7 +73,7 @@ impl<R: Reaper> Harvester<R> {
         let mut conn = self.get_connection().await?;
         let keys = self.context.keys();
 
-        let job_ids: Vec<String> = conn.zpopmin(keys.harvestable_set(), limit as isize).await?;
+        let job_ids: Vec<String> = conn.zpopmin(keys.completed_set(), limit as isize).await?;
 
         let inspector = Inspector::with_context(self.context.clone());
 
@@ -87,14 +87,14 @@ impl<R: Reaper> Harvester<R> {
         Ok(results)
     }
 
-    /// Clean up expired entries from the harvestable set (they weren't post-processed)
-    pub async fn clean_expired_harvest(&self) -> Result<usize> {
+    /// Clean up expired entries from the completed set (they weren't post-processed)
+    pub async fn clean_expired_completed(&self) -> Result<usize> {
         let mut conn = self.get_connection().await?;
         let keys = self.context.keys();
         let now = current_timestamp_ms();
 
         let removed: usize = conn
-            .zrembyscore(keys.harvestable_set(), "-inf", (now - 1).to_string())
+            .zrembyscore(keys.completed_set(), "-inf", (now - 1).to_string())
             .await?;
 
         Ok(removed)
