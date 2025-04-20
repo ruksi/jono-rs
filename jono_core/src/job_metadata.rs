@@ -25,6 +25,9 @@ pub struct JobMetadata {
 
     // Result on job completion from the worker
     pub work_summary: Option<serde_json::Value>,
+
+    // Who submitted the job; custom or hostname
+    pub origin: String,
 }
 
 impl JobMetadata {
@@ -64,6 +67,11 @@ impl JobMetadata {
         let work_summary = serde_json::from_str(work_summary_str)
             .map_err(|_| JonoError::InvalidJob("Invalid work_summary JSON".to_string()))?;
 
+        let origin = hash
+            .get("origin")
+            .ok_or_else(|| JonoError::InvalidJob("Missing origin field".to_string()))?
+            .clone();
+
         Ok(Self {
             id,
             payload,
@@ -72,6 +80,7 @@ impl JobMetadata {
             initial_priority,
             attempt_history: vec![],
             work_summary,
+            origin,
         })
     }
 }

@@ -22,6 +22,11 @@ impl Producer {
         let job_id = generate_job_id();
         let metadata_key = keys.job_metadata_hash(&job_id);
 
+        let origin = job_plan
+            .get_origin()
+            .map(ToString::to_string)
+            .unwrap_or_else(get_hostname);
+
         let _: () = redis::pipe()
             .atomic()
             .hset(&metadata_key, "id", &job_id)
@@ -43,6 +48,7 @@ impl Producer {
             .hset(&metadata_key, "created_at", now.to_string())
             .hset(&metadata_key, "attempt_history", "[]")
             .hset(&metadata_key, "work_summary", "null")
+            .hset(&metadata_key, "origin", origin)
             .query_async(&mut conn)
             .await?;
 
@@ -73,7 +79,7 @@ impl Producer {
     }
 
     /// Cancel a job if it hasn't started processing yet
-    pub async fn cancel_job(&self, job_id: &str, grace_period_ms: i64) -> Result<bool> {
+    pub async fn abort_job(&self, job_id: &str, grace_period_ms: i64) -> Result<bool> {
         let mut conn = self.get_connection().await?;
         let now = current_timestamp_ms();
         let keys = self.context.keys();

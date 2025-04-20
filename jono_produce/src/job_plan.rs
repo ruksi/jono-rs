@@ -16,6 +16,9 @@ pub struct JobPlan {
 
     /// When the job should be executed; UNIX timestamp in milliseconds or 0 to be executed as soon as possible
     postponed_to: i64,
+
+    /// Who submitted the job; custom or hostname
+    origin: Option<String>,
 }
 
 impl JobPlan {
@@ -25,6 +28,7 @@ impl JobPlan {
             max_attempts: 1,
             priority: 0,
             postponed_to: 0,
+            origin: None,
         }
     }
 
@@ -58,6 +62,14 @@ impl JobPlan {
     }
     pub fn get_postponed_to(&self) -> i64 {
         self.postponed_to
+    }
+
+    pub fn origin(mut self, origin: impl ToString) -> JobPlan {
+        self.origin = Some(origin.to_string());
+        self
+    }
+    pub fn get_origin(&self) -> Option<&str> {
+        self.origin.as_deref()
     }
 
     pub async fn submit(self, producer: &crate::Producer) -> Result<String> {

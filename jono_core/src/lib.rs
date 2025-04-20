@@ -20,7 +20,7 @@ pub use inspector::JobFilter;
 pub use job_metadata::JobMetadata;
 pub use job_status::JobStatus;
 pub use keys::Keys;
-pub use util::{current_timestamp_ms, generate_job_id};
+pub use util::{current_timestamp_ms, generate_job_id, get_hostname};
 
 pub mod prelude {
     pub use crate::{Context, Forum, Inspector, JobFilter, JobMetadata, JobStatus, JonoError};

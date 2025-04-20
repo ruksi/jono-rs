@@ -52,24 +52,43 @@ async fn test_submit_postponed_job() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_cancel_job() -> Result<()> {
+async fn test_job_origin() -> Result<()> {
+    let context = create_test_context();
+    let producer = Producer::with_context(context.clone());
+    let inspector = Inspector::with_context(context);
+
+    let payload = json!({ "action": "I have a custom name!" });
+    let origin = "my very special original hostname";
+    let job_id = JobPlan::new()
+        .payload(payload)
+        .origin(&origin)
+        .submit(&producer)
+        .await?;
+
+    assert!(inspector.job_exists(&job_id).await?);
+    let metadata = inspector.get_job_metadata(&job_id).await?;
+    assert_eq!(metadata.origin, origin);
+
+    producer.clean_job(&job_id).await?;
+    Ok(())
+}
+
+#[tokio::test]
+async fn test_abort_job() -> Result<()> {
     let context = create_test_context();
     let producer = Producer::with_context(context.clone());
     let inspector = Inspector::with_context(context);
 
     let job_id = JobPlan::new()
-        .payload(json!({ "action": "cancel this soon!" }))
+        .payload(json!({ "action": "abort this soon!" }))
         .submit(&producer)
         .await?;
 
-    assert!(producer.cancel_job(&job_id, 0).await.is_ok());
+    assert!(producer.abort_job(&job_id, 0).await.is_ok());
 
     assert!(inspector.job_exists(&job_id).await?);
     inspector.get_job_metadata(&job_id).await?;
-    assert_eq!(
-        inspector.get_job_status(&job_id).await?,
-        JobStatus::Aborted
-    );
+    assert_eq!(inspector.get_job_status(&job_id).await?, JobStatus::Aborted);
 
     producer.clean_job(&job_id).await?;
     Ok(())
@@ -109,12 +128,12 @@ async fn test_clean_job() -> Result<()> {
 }
 
 #[tokio::test]
-async fn test_job_not_found_for_cancel() {
+async fn test_job_not_found_for_abort() {
     let context = create_test_context();
     let producer = Producer::with_context(context.clone());
     let unknown_job_id = generate_job_id();
     assert!(matches!(
-        producer.cancel_job(&unknown_job_id, 0).await.err().unwrap(),
+        producer.abort_job(&unknown_job_id, 0).await.err().unwrap(),
         JonoError::JobNotFound(_)
     ));
 }
