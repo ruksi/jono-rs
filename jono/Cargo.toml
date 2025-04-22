@@ -8,6 +8,12 @@ license.workspace = true
 repository.workspace = true
 version.workspace = true
 
+[package.metadata.release]
+pre-release-replacements = [
+    {file="../README.md", search="jono = \".*?\"", replace="jono = \"{{version}}\"", prerelease=true},
+    {file="../README.md", search="version = \".*?\"", replace="version = \"{{version}}\"", prerelease=true},
+]
+
 [features]
 default = ["produce", "consume", "harvest", "runtime-tokio", "tls-none"]
 
