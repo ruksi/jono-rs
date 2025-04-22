@@ -34,7 +34,7 @@ impl<R: Reaper> Harvester<R> {
                 }
                 Ok(_) => {
                     // No jobs were harvested
-                    thread::sleep(self.config.get_polling_interval());
+                    thread::sleep(self.config.get_poll_interval());
                 }
                 Err(e) => {
                     consecutive_errors += 1;
@@ -43,7 +43,7 @@ impl<R: Reaper> Harvester<R> {
                     if consecutive_errors >= self.config.get_max_consecutive_errors() {
                         return Err(JonoError::TooManyErrors(consecutive_errors));
                     }
-                    thread::sleep(self.config.get_polling_interval());
+                    thread::sleep(self.config.get_poll_interval());
                 }
             }
         }
@@ -71,16 +71,21 @@ impl<R: Reaper> Harvester<R> {
     /// Harvest jobs that have been completed and are ready for post-processing (just-once)
     pub async fn harvest(&self, limit: usize) -> Result<Vec<JobMetadata>> {
         let mut conn = self.get_connection().await?;
+        let timeout = self.config.get_poll_timeout().as_secs_f64();
         let keys = self.context.keys();
 
-        let job_ids: Vec<String> = conn.zpopmin(keys.completed_set(), limit as isize).await?;
+        let entries: Option<(String, Vec<(String, f64)>)> = conn
+            .bzmpop_min(timeout, keys.completed_set(), limit as isize)
+            .await?;
 
         let inspector = Inspector::with_context(self.context.clone());
+        let mut results = Vec::new();
 
-        let mut results = Vec::with_capacity(job_ids.len());
-        for job_id in job_ids {
-            if let Ok(metadata) = inspector.get_job_metadata(&job_id).await {
-                results.push(metadata);
+        if let Some((_, pairs)) = entries {
+            for (job_id, _expiry_score) in pairs {
+                if let Ok(metadata) = inspector.get_job_metadata(&job_id).await {
+                    results.push(metadata);
+                }
             }
         }
 

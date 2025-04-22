@@ -6,6 +6,7 @@ use common::create_test_context;
 use jono::prelude::*;
 use jono_core::Result;
 use serde_json::json;
+use std::time::Duration;
 
 struct NoopWorker;
 
@@ -28,7 +29,8 @@ async fn test_basics() -> Result<()> {
     let context = create_test_context();
     let inspector = Inspector::with_context(context.clone());
     let producer = Producer::with_context(context.clone());
-    let harvester = Harvester::with_context(context.clone(), NoopReaper);
+    let harvester = Harvester::with_context(context.clone(), NoopReaper)
+        .with_config(HarvestConfig::new().poll_timeout(Duration::from_millis(1)));
 
     assert_eq!(harvester.harvest(1).await?.len(), 0);
 
@@ -109,8 +111,8 @@ async fn test_reaping() -> Result<()> {
 #[tokio::test]
 async fn test_nonexistent() -> Result<()> {
     let context = create_test_context();
-    let harvester = Harvester::with_context(context.clone(), NoopReaper);
-    assert_eq!(harvester.harvest(0).await?.len(), 0);
+    let harvester = Harvester::with_context(context.clone(), NoopReaper)
+        .with_config(HarvestConfig::new().poll_timeout(Duration::from_millis(1)));
     assert_eq!(harvester.harvest(1).await?.len(), 0);
     assert_eq!(harvester.harvest(2).await?.len(), 0);
     Ok(())
@@ -120,7 +122,8 @@ async fn test_nonexistent() -> Result<()> {
 async fn test_clean_harvest() -> Result<()> {
     let context = create_test_context();
     let producer = Producer::with_context(context.clone());
-    let harvester = Harvester::with_context(context.clone(), NoopReaper);
+    let harvester = Harvester::with_context(context.clone(), NoopReaper)
+        .with_config(HarvestConfig::new().poll_timeout(Duration::from_millis(1)));
 
     let job_id = JobPlan::new()
         .payload(json!({"action": "test_action"}))

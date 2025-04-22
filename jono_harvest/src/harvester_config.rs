@@ -3,7 +3,10 @@ use std::time::Duration;
 /// Configuration for the Harvester
 pub struct HarvestConfig {
     /// How long to wait between polling for new jobs
-    polling_interval: Duration,
+    poll_interval: Duration,
+
+    /// How long to wait for a job to become available each poll or "blocking"
+    poll_timeout: Duration,
 
     /// Maximum number of consecutive errors before stopping
     max_consecutive_errors: usize,
@@ -15,7 +18,8 @@ pub struct HarvestConfig {
 impl Default for HarvestConfig {
     fn default() -> Self {
         Self {
-            polling_interval: Duration::from_millis(500),
+            poll_interval: Duration::from_millis(100),
+            poll_timeout: Duration::from_secs(5),
             max_consecutive_errors: 3,
             batch_size: 1,
         }
@@ -27,12 +31,20 @@ impl HarvestConfig {
         HarvestConfig::default()
     }
 
-    pub fn polling_interval(mut self, polling_interval: Duration) -> HarvestConfig {
-        self.polling_interval = polling_interval;
+    pub fn poll_interval(mut self, poll_interval: Duration) -> HarvestConfig {
+        self.poll_interval = poll_interval;
         self
     }
-    pub fn get_polling_interval(&self) -> Duration {
-        self.polling_interval
+    pub fn get_poll_interval(&self) -> Duration {
+        self.poll_interval
+    }
+
+    pub fn poll_timeout(mut self, poll_timeout: Duration) -> HarvestConfig {
+        self.poll_timeout = poll_timeout;
+        self
+    }
+    pub fn get_poll_timeout(&self) -> Duration {
+        self.poll_timeout
     }
 
     pub fn max_consecutive_errors(mut self, max_consecutive_errors: usize) -> HarvestConfig {
