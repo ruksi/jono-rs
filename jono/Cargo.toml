@@ -69,10 +69,10 @@ tls-rustls-webpki = [
 ]
 
 [dependencies]
-jono_core = { path = "../jono_core", version = "=0.1.6-rc.7", default-features = false }
-jono_produce = { path = "../jono_produce", version = "=0.1.6-rc.7", default-features = false, optional = true }
-jono_consume = { path = "../jono_consume", version = "=0.1.6-rc.7", default-features = false, optional = true }
-jono_harvest = { path = "../jono_harvest", version = "=0.1.6-rc.7", default-features = false, optional = true }
+jono_core = { path = "../jono_core", version = "=0.1.6-rc.8", default-features = false }
+jono_produce = { path = "../jono_produce", version = "=0.1.6-rc.8", default-features = false, optional = true }
+jono_consume = { path = "../jono_consume", version = "=0.1.6-rc.8", default-features = false, optional = true }
+jono_harvest = { path = "../jono_harvest", version = "=0.1.6-rc.8", default-features = false, optional = true }
 
 [dev-dependencies]
 redis.workspace = true

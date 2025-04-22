@@ -15,9 +15,9 @@ is used to get the next job to be processed.
 
 ```toml
 [dependencies]
-jono = "0.1.6-rc.7"
+jono = "0.1.6-rc.8"
 # or, for minimal stuff:
-jono = { version = "0.1.6-rc.7", default-features = false, features = ["produce", "runtime-tokio", "tls-none"] }
+jono = { version = "0.1.6-rc.8", default-features = false, features = ["produce", "runtime-tokio", "tls-none"] }
 ```
 
 ```rust
@@ -40,9 +40,9 @@ pub async fn codebase_1() -> Result<()> {
 
 ```toml
 [dependencies]
-jono = "0.1.6-rc.7"
+jono = "0.1.6-rc.8"
 # or, for minimal stuff:
-jono = { version = "0.1.6-rc.7", default-features = false, features = ["consume", "runtime-tokio", "tls-none"] }
+jono = { version = "0.1.6-rc.8", default-features = false, features = ["consume", "runtime-tokio", "tls-none"] }
 ```
 
 ```rust
@@ -80,9 +80,9 @@ impl Worker for NoopWorker {
 
 ```toml
 [dependencies]
-jono = "0.1.6-rc.7"
+jono = "0.1.6-rc.8"
 # or, for minimal stuff:
-jono = { version = "0.1.6-rc.7", default-features = false, features = ["harvest", "runtime-tokio", "tls-none"] }
+jono = { version = "0.1.6-rc.8", default-features = false, features = ["harvest", "runtime-tokio", "tls-none"] }
 ```
 
 ```rust
