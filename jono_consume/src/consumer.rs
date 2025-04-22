@@ -51,7 +51,7 @@ impl<W: Worker> Consumer<W> {
     }
 
     pub async fn run_next(&self) -> Result<Option<WorkSummary>> {
-        match self.acquire_next_job().await? {
+        match self.start_next_job().await? {
             Some(metadata) => {
                 let summary = self.process_job(metadata).await?;
                 Ok(Some(summary))
@@ -60,7 +60,7 @@ impl<W: Worker> Consumer<W> {
         }
     }
 
-    async fn acquire_next_job(&self) -> Result<Option<Workload>> {
+    async fn start_next_job(&self) -> Result<Option<Workload>> {
         let mut conn = self.get_connection().await?;
         let keys = self.context.keys();
 
