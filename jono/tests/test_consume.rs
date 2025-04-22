@@ -6,6 +6,7 @@ use common::create_test_context;
 use jono::prelude::*;
 use jono_core::Result;
 use serde_json::json;
+use std::time::Duration;
 
 struct NoopWorker;
 
@@ -56,7 +57,7 @@ async fn test_with_config() -> Result<()> {
 
     let consumer = Consumer::with_context(context.clone(), NoopWorker).with_config(
         ConsumerConfig::new()
-            .polling_interval(Duration::from_millis(50))
+            .poll_interval(Duration::from_millis(50))
             .heartbeat_interval(Duration::from_secs(2)),
     );
 
@@ -72,7 +73,8 @@ async fn test_with_config() -> Result<()> {
 #[tokio::test]
 async fn test_nonexistent_job() -> Result<()> {
     let context = create_test_context();
-    let consumer = Consumer::with_context(context, NoopWorker);
+    let consumer = Consumer::with_context(context, NoopWorker)
+        .with_config(ConsumerConfig::new().poll_timeout(Duration::from_millis(1)));
     assert!(consumer.run_next().await.is_ok_and(|v| v.is_none()));
     Ok(())
 }

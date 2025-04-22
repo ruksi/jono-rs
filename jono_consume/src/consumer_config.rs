@@ -4,7 +4,10 @@ use std::time::Duration;
 #[derive(Debug, Clone)]
 pub struct ConsumerConfig {
     /// How long to wait between polling for new jobs
-    polling_interval: Duration,
+    poll_interval: Duration,
+
+    /// How long to wait for a job to become available each poll or "blocking"
+    poll_timeout: Duration,
 
     /// How often to update the heartbeat
     heartbeat_interval: Duration,
@@ -19,7 +22,8 @@ pub struct ConsumerConfig {
 impl Default for ConsumerConfig {
     fn default() -> Self {
         Self {
-            polling_interval: Duration::from_millis(100),
+            poll_interval: Duration::from_millis(100),
+            poll_timeout: Duration::from_secs(5),
             heartbeat_interval: Duration::from_secs(5),
             heartbeat_timeout: Duration::from_secs(10),
             max_consecutive_errors: 3,
@@ -32,12 +36,20 @@ impl ConsumerConfig {
         ConsumerConfig::default()
     }
 
-    pub fn polling_interval(mut self, polling_interval: Duration) -> ConsumerConfig {
-        self.polling_interval = polling_interval;
+    pub fn poll_interval(mut self, poll_interval: Duration) -> ConsumerConfig {
+        self.poll_interval = poll_interval;
         self
     }
-    pub fn get_polling_interval(&self) -> Duration {
-        self.polling_interval
+    pub fn get_poll_interval(&self) -> Duration {
+        self.poll_interval
+    }
+
+    pub fn poll_timeout(mut self, poll_timeout: Duration) -> ConsumerConfig {
+        self.poll_timeout = poll_timeout;
+        self
+    }
+    pub fn get_poll_timeout(&self) -> Duration {
+        self.poll_timeout
     }
 
     pub fn heartbeat_interval(mut self, heartbeat_interval: Duration) -> ConsumerConfig {

@@ -35,7 +35,7 @@ impl<W: Worker> Consumer<W> {
                     consecutive_errors = 0;
                 }
                 Ok(None) => {
-                    thread::sleep(self.config.get_polling_interval());
+                    thread::sleep(self.config.get_poll_interval());
                 }
                 Err(e) => {
                     consecutive_errors += 1;
@@ -44,7 +44,7 @@ impl<W: Worker> Consumer<W> {
                     if consecutive_errors >= self.config.get_max_consecutive_errors() {
                         return Err(JonoError::TooManyErrors(consecutive_errors));
                     }
-                    thread::sleep(self.config.get_polling_interval());
+                    thread::sleep(self.config.get_poll_interval());
                 }
             }
         }
@@ -62,11 +62,12 @@ impl<W: Worker> Consumer<W> {
 
     async fn start_next_job(&self) -> Result<Option<Workload>> {
         let mut conn = self.get_connection().await?;
+        let timeout = self.config.get_poll_timeout().as_secs_f64();
         let keys = self.context.keys();
 
-        let entries: Vec<(String, i64)> = conn.zpopmin(keys.queued_set(), 1).await?;
+        let entries: Vec<(String, String, i64)> = conn.bzpopmin(keys.queued_set(), timeout).await?;
 
-        if let Some((job_id, _)) = entries.first() {
+        if let Some((_set, job_id, _score)) = entries.first() {
             let inspector = Inspector::with_context(self.context.clone());
             let metadata = inspector.get_job_metadata(job_id).await?;
             let workload = Workload::from_metadata(metadata);
