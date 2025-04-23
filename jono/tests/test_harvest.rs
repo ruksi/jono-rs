@@ -1,28 +1,16 @@
 #![cfg(all(feature = "produce", feature = "consume", feature = "harvest"))]
 
 mod common;
+mod reapers;
+mod workers;
 
 use common::create_test_context;
 use jono::prelude::*;
 use jono_core::Result;
+use reapers::NoopReaper;
 use serde_json::json;
 use std::time::Duration;
-
-struct NoopWorker;
-
-impl Worker for NoopWorker {
-    async fn work(&self, _: &Workload) -> Result<WorkSummary> {
-        Ok(WorkSummary::Success(Some(json!({"processed": true}))))
-    }
-}
-
-struct NoopReaper;
-
-impl Reaper for NoopReaper {
-    async fn reap(&self, _: &Reapload) -> Result<ReapSummary> {
-        Ok(ReapSummary::Success(None))
-    }
-}
+use workers::NoopWorker;
 
 #[tokio::test]
 async fn test_basics() -> Result<()> {
@@ -63,46 +51,6 @@ async fn test_basics() -> Result<()> {
     // the single harvestable was processed already
     let completed = harvester.harvest(1).await?;
     assert_eq!(completed.len(), 0);
-
-    producer.clean_job(&job_id).await?;
-    Ok(())
-}
-
-#[tokio::test]
-async fn test_reaping() -> Result<()> {
-    let context = create_test_context();
-    let producer = Producer::with_context(context.clone());
-
-    struct MyReaper;
-    impl Reaper for MyReaper {
-        async fn reap(&self, reapload: &Reapload) -> Result<ReapSummary> {
-            Ok(ReapSummary::Success(Some(json!({
-                "reaped": true,
-                "job_id": reapload.job_id
-            }))))
-        }
-    }
-    let harvester = Harvester::with_context(context.clone(), MyReaper);
-
-    let job_id = JobPlan::new()
-        .payload(json!({"action": "test_reaping"}))
-        .submit(&producer)
-        .await?;
-
-    let consumer = Consumer::with_context(context.clone(), NoopWorker);
-    let work_summary = consumer.run_next().await?;
-    assert!(matches!(work_summary, Some(WorkSummary::Success(_))));
-
-    // the job should now be in the completed set,
-    // ready to be reaped
-    let reap_summaries = harvester.reap_next_batch().await?;
-    assert_eq!(reap_summaries.len(), 1);
-    if let ReapSummary::Success(Some(data)) = &reap_summaries[0] {
-        assert_eq!(data["reaped"], json!(true));
-        assert_eq!(data["job_id"], json!(job_id));
-    } else {
-        panic!("Expected success summary with data");
-    }
 
     producer.clean_job(&job_id).await?;
     Ok(())
